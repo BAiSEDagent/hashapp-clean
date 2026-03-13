@@ -28,9 +28,11 @@ Critical fit for Hashapp:
 - session keys
 - paymaster constraints
 - fleet-friendly execution model
+- Coinbase distribution story
 
 ### Uniswap
 Best concrete value-movement action for the demo and strongest Track 1 partner.
+Use only if a swap or market action is truly in the live flow.
 
 ### ENS
 Improves readability and trust. Human-friendly payees and agents instead of raw addresses.
@@ -49,3 +51,6 @@ Strong implementation partner for polished wallet UX, identity continuity, and a
 
 ## Anti-pattern
 Do not create a sponsor salad. The stack should feel inevitable, not stitched together.
+
+## Demo rule
+If a partner does not appear clearly in the live demo or meaningfully improve the trust story, cut it from the spoken stack.

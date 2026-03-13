@@ -30,6 +30,28 @@ Hashapp has four layers:
    - proof / transaction references
    - optional attestations
 
+## Onchain litmus test
+Put it onchain only if it involves:
+- trustless value transfer
+- durable permission boundaries
+- composable execution other contracts or wallets need to trust
+- permanent commitments or proofs
+
+Keep it offchain if it involves:
+- feeds
+- receipts formatting
+- search / filtering / sorting
+- trusted status labels
+- human-readable reasoning
+- fast-changing business logic
+
+## Contract count bias
+Hashapp should not overbuild onchain.
+
+MVP target:
+- **0-2 contracts**
+- ideally none beyond existing wallet / paymaster / identity infrastructure unless a minimal policy or budget contract becomes necessary
+
 ## Enforcement thesis
 The product should be fast and consumer-grade, but the scariest part of the system must have a real enforcement answer.
 
@@ -97,6 +119,9 @@ If requests are sponsored, paymaster policy checks should enforce constraints be
 - optional per-agent limits
 
 This supports a gasless feel without making the trust model soft.
+
+### EIP-7702 awareness
+EIP-7702 is live and matters to the product direction because EOAs can access smart-wallet-like capabilities without full migration. For the MVP, Hashapp should stay focused on the clearest Base smart wallet/session path, but the product narrative should acknowledge that smart EOAs make this category bigger, not smaller.
 
 ## Hybrid trust model
 ### Offchain

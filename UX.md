@@ -15,6 +15,8 @@
 - make approvals feel lightweight and reversible
 - show intent, not raw blockchain internals
 - translate failures into human-readable explanations
+- show USD value wherever money appears
+- one obvious next action per state
 
 ## Main tabs
 1. Home
@@ -40,6 +42,7 @@
 - tap into receipt detail
 - support filtering by agent, service, or status
 - feed should be intent-aware, not explorer-style
+- every money amount should have USD context
 
 ### Pay / Approval
 - incoming purchase requests
@@ -47,6 +50,7 @@
 - show reason, vendor, amount, policy match
 - clearly distinguish manual approvals vs auto-approved actions
 - clearly distinguish low-risk scope updates vs high-risk re-auths
+- only one obvious primary action at a time
 
 ### Payees
 - search by ENS, Basename, address, agent name, service name
@@ -54,6 +58,7 @@
 - verified services
 - avatars everywhere
 - recent and favorite destinations
+- human-readable identity first, raw address second
 
 ### Agent detail
 - linked identity
@@ -92,6 +97,12 @@ Avoid:
 - Transaction failed
 - Execution reverted
 - Policy hook rejected
+
+## Onchain UX rules
+- onchain actions need their own loader and disabled state
+- buttons should stay disabled until confirmation, not just wallet signature
+- do not show multiple conflicting primary actions at once
+- address displays should prefer resolved identity and readable components over raw hex
 
 ## Fleet UX
 The product should feel just as good with one agent as with five.

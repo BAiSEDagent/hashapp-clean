@@ -97,3 +97,22 @@ not
 ### Base-specific notes
 - Use Basenames / human-readable identities to improve allowlist readability.
 - Use batching where possible so one user action feels like one action, not multiple blockchain rows.
+
+## Ethskills / Base-focused build notes
+
+### Architecture constraints
+- Most MVP dApps need **0-2 contracts**, not a contract forest.
+- Put only value transfer, durable permissions, and commitments onchain.
+- Keep feeds, receipts, search, and business logic offchain.
+- Base is the right home chain because its superpower matches the product: consumer onboarding, smart wallets, and account abstraction.
+
+### Wallet guidance
+- EIP-7702 is live and expands the design space for smart-EOA experiences.
+- Session keys, batching, sponsorship, and approval-fatigue reduction are central wallet patterns, not nice-to-haves.
+- Never rely on raw addresses or raw transaction states in user-facing UX.
+
+### Frontend UX rules
+- Every onchain button needs its own loader and disabled state until confirmation.
+- Show only one clear primary action per state.
+- Resolve identity before showing raw addresses whenever possible.
+- Show USD context anywhere money appears.
