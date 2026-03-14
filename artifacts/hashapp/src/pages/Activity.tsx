@@ -1,15 +1,15 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, CheckCircle2, XCircle, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Search, ShieldCheck } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useDemo, type FeedItem, type StatusType } from '@/context/DemoContext';
 import { AvatarIcon } from '@/components/ui/AvatarIcon';
 
 const TRUSTED_DESTINATIONS = [
-  { name: 'PitchBook', initial: 'P', color: 'bg-blue-600', basename: 'pitchbook.base.eth' },
-  { name: 'Perplexity', initial: 'P', color: 'bg-teal-500', basename: 'perplexity.base.eth' },
-  { name: 'OpenAI', initial: 'O', color: 'bg-zinc-700', basename: 'openai.base.eth' },
-  { name: 'Statista', initial: 'S', color: 'bg-orange-500', basename: 'statista.base.eth' },
-  { name: 'DataStream', initial: 'D', color: 'bg-purple-600', basename: 'datastream.base.eth' },
+  { name: 'PitchBook', initial: 'P', color: 'bg-blue-600' },
+  { name: 'Perplexity', initial: 'P', color: 'bg-teal-500' },
+  { name: 'OpenAI', initial: 'O', color: 'bg-zinc-700' },
+  { name: 'Statista', initial: 'S', color: 'bg-orange-500' },
+  { name: 'DataStream', initial: 'D', color: 'bg-purple-600' },
 ];
 
 export default function Activity() {

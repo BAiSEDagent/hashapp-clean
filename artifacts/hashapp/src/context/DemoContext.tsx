@@ -27,7 +27,6 @@ export interface SpendPermission {
   cadence: 'monthly' | 'weekly' | 'daily';
   state: 'active' | 'revoked' | 'pending';
   ruledBy: string;
-  basename?: string;
 }
 
 export interface Rule {
@@ -134,7 +133,6 @@ const INITIAL_SPEND_PERMISSIONS: SpendPermission[] = [
     cadence: 'daily',
     state: 'active',
     ruledBy: 'r2',
-    basename: 'perplexity.base.eth'
   },
   {
     id: 'sp-2',
@@ -145,7 +143,6 @@ const INITIAL_SPEND_PERMISSIONS: SpendPermission[] = [
     cadence: 'monthly',
     state: 'active',
     ruledBy: 'r2',
-    basename: 'openai.base.eth'
   },
 ];
 
@@ -200,9 +197,9 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
           merchantInitial: 'D',
           amount: 89.00,
           amountStr: '$89.00',
-          intent: "Scout attempted to create a spend permission for DataStream Pro",
+          intent: "Scout attempted first charge under DataStream Pro spend permission",
           status: 'BLOCKED',
-          statusMessage: 'Blocked — spend permissions disabled',
+          statusMessage: 'Blocked — exceeds per-purchase cap',
           timestamp: 'Just now',
           category: 'Data Services'
         };
@@ -233,7 +230,6 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
       cadence: 'monthly',
       state: 'active',
       ruledBy: 'r4',
-      basename: 'datastream.base.eth'
     }]);
     if (stage === 'PENDING_ADDED') setStage('APPROVED');
   };

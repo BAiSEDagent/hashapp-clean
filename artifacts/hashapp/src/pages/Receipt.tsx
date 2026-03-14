@@ -4,15 +4,6 @@ import { motion } from 'framer-motion';
 import { useDemo } from '@/context/DemoContext';
 import { AvatarIcon } from '@/components/ui/AvatarIcon';
 
-const BASENAME_MAP: Record<string, string> = {
-  'Perplexity': 'perplexity.base.eth',
-  'OpenAI': 'openai.base.eth',
-  'PitchBook': 'pitchbook.base.eth',
-  'Statista': 'statista.base.eth',
-  'DataStream Pro': 'datastream.base.eth',
-  'CloudAnalytics': 'cloudanalytics.eth',
-};
-
 export default function Receipt() {
   const [, params] = useRoute('/receipt/:id');
   const { feed } = useDemo();
@@ -20,8 +11,6 @@ export default function Receipt() {
   const item = feed.find(f => f.id === params?.id);
 
   if (!item) return <div className="p-8 text-center mt-20 text-muted-foreground">Receipt not found</div>;
-
-  const basename = BASENAME_MAP[item.merchant];
 
   return (
     <motion.div 
@@ -46,10 +35,7 @@ export default function Receipt() {
             className="mb-5 shadow-2xl"
           />
           
-          <h2 className="text-lg font-medium text-muted-foreground/70 mb-0.5">{item.merchant}</h2>
-          {basename && (
-            <p className="text-[11px] text-muted-foreground/40 font-mono mb-3">{basename}</p>
-          )}
+          <h2 className="text-lg font-medium text-muted-foreground/70 mb-3">{item.merchant}</h2>
           <h1 className="text-[52px] font-bold tracking-tighter text-foreground leading-none mb-6">
             {item.amountStr}
           </h1>
@@ -79,7 +65,9 @@ export default function Receipt() {
               value={item.status === 'AUTO_APPROVED' ? 'Auto-approved' : item.status === 'APPROVED' ? 'Human-approved' : item.status === 'BLOCKED' ? 'Blocked by rule' : item.status === 'DECLINED' ? 'Declined' : 'Pending'} 
             />
             <div className="flex items-center justify-between py-4 border-t border-border/30">
-              <span className="text-[12px] text-muted-foreground/50 font-medium">Authorized by</span>
+              <span className="text-[12px] text-muted-foreground/50 font-medium">
+                {item.status === 'BLOCKED' || item.status === 'DECLINED' ? 'Requested by' : 'Authorized by'}
+              </span>
               <div className="flex items-center gap-2">
                 <AvatarIcon initial="S" colorClass="bg-zinc-800" size="sm" />
                 <div className="text-right">

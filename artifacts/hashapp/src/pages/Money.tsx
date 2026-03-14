@@ -126,9 +126,6 @@ function SpendPermissionRow({ permission }: { permission: SpendPermission }) {
           <span className="text-[13px] font-semibold text-foreground">{permission.vendor}</span>
           <div className={`w-1.5 h-1.5 rounded-full ${permission.state === 'active' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
         </div>
-        {permission.basename && (
-          <p className="text-[10px] text-muted-foreground/40 font-mono">{permission.basename}</p>
-        )}
       </div>
       <div className="text-right shrink-0">
         <span className="text-[13px] font-semibold tabular-nums">${permission.amount}</span>

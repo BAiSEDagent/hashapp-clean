@@ -70,9 +70,6 @@ export default function Agent() {
                     <AvatarIcon initial={perm.vendorInitial} colorClass={perm.vendorColor} size="sm" />
                     <div className="flex-1 min-w-0">
                       <span className="text-[13px] font-medium text-foreground">{perm.vendor}</span>
-                      {perm.basename && (
-                        <p className="text-[10px] text-muted-foreground/40 font-mono">{perm.basename}</p>
-                      )}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-[13px] font-semibold tabular-nums">${perm.amount}{cadenceLabel[perm.cadence]}</span>
