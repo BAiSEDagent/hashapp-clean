@@ -229,3 +229,24 @@ Revisit soon
 
 ### Notes
 Do not let the user-facing product become a confused multi-wallet showcase.
+
+---
+
+## 2026-03-14 — Default to fully Base-native permission plumbing unless a concrete blocker appears
+
+### Decision
+Default to a fully Base-native permission stack and only reopen MetaMask as the main plumbing path if a minimal Base session-key proof exposes a real blocker.
+
+### Why
+The strongest hackathon version is the most coherent one: Base-native product, Base-native trust story, Base-native permission plumbing.
+
+### Alternatives considered
+- immediate MetaMask pivot
+- indefinite architecture debate
+- mixed story without a forcing function
+
+### Status
+Active
+
+### Notes
+Next checkpoint: prove one thin Base-native scoped-session flow before revisiting the plumbing choice.
