@@ -56,9 +56,11 @@ Every package extends `tsconfig.base.json` which sets `composite: true`. The roo
 Hashapp — consumer-grade dark premium spending app for AI agents. Demo-only frontend prototype (no backend). Built with React + Vite + Tailwind CSS + framer-motion + wouter.
 
 - **Theme**: Dark-only (near-black bg hsl 220 20% 4%), blue accent (hsl 220 60% 55%), mobile-first max-width 430px
-- **Routes**: `/` (Activity Feed), `/agent` (Scout Agent Detail), `/rules` (Spending Rules), `/payees` (Trusted Destinations), `/receipt/:id` (Receipt Detail)
-- **Demo Flow**: Load → 3s pause → pending approval slides in → user approves → navigate to Rules → toggle off "No recurring charges" → return to Activity → 2s → new blocked entry appears
-- **Key Design**: Intent-aware language ("Scout bought research credits..."), plain-English rules, subtle onchain references ("Settled on Base · proof available", "Verified on Base · ERC-8004 #4721")
+- **Routes**: `/money` (Money — non-custodial wallet allocation), `/` (Activity Feed with trusted destinations rail), `/agent` (Scout Agent Detail), `/rules` (Spending Rules), `/receipt/:id` (Receipt Detail)
+- **Nav tabs**: Money | Activity | Scout | Rules
+- **Money model**: Explicitly non-custodial — funds live in user's connected Base smart wallet with scoped allocation to Scout. Language: "Available for Scout", "USDC from connected wallet", "Hashapp never takes custody"
+- **Demo Flow**: Load → 3s pause → pending spend permission slides in → user approves → navigate to Rules → toggle off "Block spend permissions (recurring)" → return to Activity → 2s → new blocked entry appears
+- **Key Design**: Intent-aware language ("Scout bought research credits..."), plain-English rules, subtle onchain references ("Settled in USDC on Base · proof available", "Verified on Base · ERC-8004 #4721"), spend permission terminology for recurring charges
 - **Dependencies**: react, framer-motion, wouter, lucide-react, tailwindcss, clsx, tailwind-merge
 
 ### `artifacts/api-server` (`@workspace/api-server`)

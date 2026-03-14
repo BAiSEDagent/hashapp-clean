@@ -5,11 +5,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { DemoProvider } from "@/context/DemoContext";
 
+import Money from "@/pages/Money";
 import Activity from "@/pages/Activity";
 import Receipt from "@/pages/Receipt";
 import Rules from "@/pages/Rules";
 import Agent from "@/pages/Agent";
-import Payees from "@/pages/Payees";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -19,10 +19,10 @@ function Router() {
     <MobileLayout>
       <Switch>
         <Route path="/" component={Activity} />
+        <Route path="/money" component={Money} />
         <Route path="/receipt/:id" component={Receipt} />
         <Route path="/rules" component={Rules} />
         <Route path="/agent" component={Agent} />
-        <Route path="/payees" component={Payees} />
         <Route component={NotFound} />
       </Switch>
     </MobileLayout>

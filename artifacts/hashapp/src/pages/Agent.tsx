@@ -1,15 +1,16 @@
 import React from 'react';
-import { Bot, Shield, ArrowRight, Zap, CheckCircle2 } from 'lucide-react';
+import { Bot, Shield, ArrowRight, Clock, CheckCircle2, Zap } from 'lucide-react';
 import { useDemo } from '@/context/DemoContext';
 import { AvatarIcon } from '@/components/ui/AvatarIcon';
 
 export default function Agent() {
-  const { rules } = useDemo();
+  const { rules, feed } = useDemo();
   const activeRulesCount = rules.filter(r => r.enabled).length;
+  const approvedCount = feed.filter(i => i.status === 'APPROVED' || i.status === 'AUTO_APPROVED').length;
+  const blockedCount = feed.filter(i => i.status === 'BLOCKED').length;
 
   return (
     <div className="flex flex-col min-h-full pb-8">
-      {/* Profile Header */}
       <div className="px-6 pt-16 pb-8 flex flex-col items-center text-center">
         <div className="relative mb-6">
           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 border-2 border-zinc-700 flex items-center justify-center shadow-2xl">
@@ -31,22 +32,33 @@ export default function Agent() {
         </div>
       </div>
 
-      {/* Stats Grid */}
       <div className="px-6 flex flex-col gap-4">
-        
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-card rounded-2xl p-4 border border-border/50 text-center">
+            <p className="text-2xl font-bold tracking-tight text-foreground">{approvedCount}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Approved</p>
+          </div>
+          <div className="bg-card rounded-2xl p-4 border border-border/50 text-center">
+            <p className="text-2xl font-bold tracking-tight text-foreground">{blockedCount}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Blocked</p>
+          </div>
+          <div className="bg-card rounded-2xl p-4 border border-border/50 text-center">
+            <p className="text-2xl font-bold tracking-tight text-foreground">{activeRulesCount}</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Rules</p>
+          </div>
+        </div>
+
         <div className="bg-card rounded-2xl p-5 border border-border/50">
           <div className="flex items-center gap-3 mb-4 text-muted-foreground">
             <Zap size={18} />
-            <span className="text-sm font-medium">Monthly Spend</span>
+            <span className="text-sm font-medium">Operating State</span>
           </div>
-          <div className="flex items-end justify-between">
-            <h2 className="text-4xl font-bold tracking-tighter text-foreground">$312.00</h2>
-            <span className="text-sm text-muted-foreground mb-1.5">14 purchases</span>
+          <div className="space-y-3">
+            <StateRow label="Status" value="Active" valueColor="text-emerald-400" />
+            <StateRow label="Spending from" value="Your connected wallet" />
+            <StateRow label="Settlement" value="USDC on Base" />
+            <StateRow label="Constraints" value={`${activeRulesCount} active rules`} />
           </div>
-          <div className="w-full h-1.5 bg-secondary rounded-full mt-4 overflow-hidden">
-            <div className="h-full bg-primary w-[45%] rounded-full" />
-          </div>
-          <p className="text-xs text-muted-foreground mt-2 text-right">45% of $700 limit</p>
         </div>
 
         <div className="bg-card rounded-2xl p-5 border border-border/50 flex items-center justify-between cursor-pointer hover:bg-secondary/30 transition-colors">
@@ -62,14 +74,34 @@ export default function Agent() {
           <ArrowRight size={20} className="text-muted-foreground" />
         </div>
 
+        <div className="bg-card rounded-2xl p-5 border border-border/50 flex items-center justify-between cursor-pointer hover:bg-secondary/30 transition-colors">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+              <Clock size={20} className="text-muted-foreground" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground">Recent Actions</h3>
+              <p className="text-sm text-muted-foreground">View Scout's activity log</p>
+            </div>
+          </div>
+          <ArrowRight size={20} className="text-muted-foreground" />
+        </div>
       </div>
 
-      {/* Proof Footer */}
       <div className="mt-auto pt-12 text-center pb-4">
         <p className="text-[13px] text-muted-foreground/50 font-medium">
           Verified on Base · ERC-8004 #4721
         </p>
       </div>
+    </div>
+  );
+}
+
+function StateRow({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className={`text-sm font-medium ${valueColor || 'text-foreground'}`}>{value}</span>
     </div>
   );
 }

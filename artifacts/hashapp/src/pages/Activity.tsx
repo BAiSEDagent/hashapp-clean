@@ -4,6 +4,14 @@ import { useLocation } from 'wouter';
 import { useDemo, type FeedItem, type StatusType } from '@/context/DemoContext';
 import { AvatarIcon } from '@/components/ui/AvatarIcon';
 
+const TRUSTED_DESTINATIONS = [
+  { name: 'PitchBook', initial: 'P', color: 'bg-blue-600' },
+  { name: 'Perplexity', initial: 'P', color: 'bg-teal-500' },
+  { name: 'OpenAI', initial: 'O', color: 'bg-zinc-700' },
+  { name: 'Statista', initial: 'S', color: 'bg-orange-500' },
+  { name: 'DataStream', initial: 'D', color: 'bg-purple-600' },
+];
+
 export default function Activity() {
   const { feed, approvePending, declinePending } = useDemo();
   const [, setLocation] = useLocation();
@@ -16,7 +24,6 @@ export default function Activity() {
 
   return (
     <div className="flex flex-col min-h-full">
-      {/* Header */}
       <header className="px-6 pt-12 pb-4 flex items-center justify-between sticky top-0 bg-background/90 backdrop-blur-md z-10">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Activity</h1>
@@ -28,15 +35,29 @@ export default function Activity() {
         </div>
       </header>
 
-      {/* Search */}
-      <div className="px-6 mb-6">
-        <div className="relative flex items-center w-full h-12 rounded-xl bg-secondary/50 border border-border/50 text-muted-foreground px-4">
-          <Search size={18} className="mr-3" />
-          <span className="text-sm">Search activity</span>
+      <div className="mb-4">
+        <div className="px-6 mb-3 flex items-center justify-between">
+          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Trusted Destinations</h2>
+        </div>
+        <div className="flex overflow-x-auto gap-4 px-6 pb-2 snap-x snap-mandatory hide-scrollbar">
+          {TRUSTED_DESTINATIONS.map((payee) => (
+            <div key={payee.name} className="flex flex-col items-center gap-1.5 snap-start shrink-0">
+              <AvatarIcon initial={payee.initial} colorClass={payee.color} size="md" className="shadow-lg" />
+              <span className="text-[10px] font-medium text-muted-foreground w-14 text-center truncate">
+                {payee.name}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Feed */}
+      <div className="px-6 mb-5">
+        <div className="relative flex items-center w-full h-11 rounded-xl bg-secondary/50 border border-border/50 text-muted-foreground px-4">
+          <Search size={16} className="mr-3" />
+          <span className="text-sm">Search activity or payees</span>
+        </div>
+      </div>
+
       <div className="px-4 pb-8 flex flex-col gap-6">
         {Object.entries(groupedFeed).map(([dateGroup, items]) => (
           <div key={dateGroup} className="flex flex-col gap-3">
