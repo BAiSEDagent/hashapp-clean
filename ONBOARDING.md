@@ -20,44 +20,55 @@ Do not overexplain protocols.
 
 Hashapp onboarding should be a short trust-building flow.
 
-## Four-step onboarding
-### 1. Connect wallet
+## Handshake onboarding
+Onboarding should feel like a handshake, not a registration flow.
+
+## Product truth vs starter path
+### Product truth
+Hashapp supports **BYOA — Bring Your Own Agent**.
+Users should be able to connect their own agent(s) and manage them through Hashapp.
+
+### Starter path
+For first-run clarity and demo speed, onboarding can use **Scout** as the default starter/demo agent.
+This lets users reach first success quickly before they connect their own agent.
+
+## Recommended four-step onboarding
+### 1. Safety foundation
 Purpose:
-- establish that funds stay in the user’s wallet
-- explain non-custodial model simply
+- establish that the user is in control
+- explain that funds stay in the user’s wallet
 
 Key copy:
-- Your wallet stays yours
-- Hashapp never takes custody
+- Your wallet. Your rules.
+- Hashapp never takes custody.
 
-### 2. Meet Scout
+### 2. Agent introduction
 Purpose:
-- make Scout feel real, useful, and safe
+- either introduce Scout as the starter path
+- or let the user choose to connect their own agent
 
-Show:
-- Scout avatar
-- what Scout does
-- what Scout can ask to buy
-- what kind of value it creates
+Possible choices:
+- Start with Scout
+- Connect your own agent
 
-### 3. Set Scout’s first boundary
+### 3. Set first boundary
 Purpose:
-- give Scout a safe starting budget and policy
+- give the chosen agent a safe starting budget and policy
 
 Show:
 - first budget/allocation
 - basic preset
 - approval mode
 
-This should feel like giving Scout an allowance, not configuring a wallet engine.
+This should feel like giving the agent an allowance, not configuring a wallet engine.
 
 ### 4. Review first request
 Purpose:
 - let the user experience one real permission moment
 
 Show:
-- Scout asks for one small purchase
-- user approves, denies, or changes rule
+- the agent asks for one small purchase
+- user approves, denies, or changes a rule
 - result lands in Activity
 
 Then drop the user into the real app.

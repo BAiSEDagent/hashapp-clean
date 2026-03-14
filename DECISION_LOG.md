@@ -270,4 +270,24 @@ Hashapp must teach trust, non-custody, scoped permissions, and revoke-ability cl
 Active
 
 ### Notes
-Best current shape: Connect wallet → Meet Scout → Set first boundary → Review first request.
+Onboarding should feel like a handshake, not a registration flow.
+
+---
+
+## 2026-03-14 — BYOA is the product truth; Scout is the starter/demo path
+
+### Decision
+Hashapp should support **Bring Your Own Agent (BYOA)** as the real product model, while using **Scout** as the default starter/demo path for first-run onboarding and fast activation.
+
+### Why
+This keeps the product honest and scalable without sacrificing clarity in the first-run experience.
+
+### Alternatives considered
+- Scout as the only product assumption
+- BYOA only, with no starter path
+
+### Status
+Active
+
+### Notes
+Best onboarding shape now: Safety foundation → choose Scout or connect your own agent → set first boundary → review first request.
