@@ -49,5 +49,9 @@ Design the strongest possible Synthesis submission and progressively connect the
 ## Repo structure
 - `/` — docs, strategy, proof notes, decision logs
 - `/app` — cleaned integration of the Replit truth-pass app/workspace
+- `BRANCH_GUIDE.md` — what each branch is for
 
 This repo started as docs-first. It now also contains the integrated app workspace under `app/` so product, proof, and implementation can move together.
+
+## Current branch guidance
+Read `BRANCH_GUIDE.md` before assuming where active app work lives.
