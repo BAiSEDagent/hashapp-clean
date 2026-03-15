@@ -1,0 +1,65 @@
+{
+  "metadata": {
+    "title": "Hashapp Base-Native Spend Permission Proof",
+    "date": "2026-03-15T02:34:14.220Z",
+    "network": "Base Sepolia",
+    "chainId": 84532,
+    "spendPermissionManager": "0xf85210B21cC50302F477BA56686d2019dC9b67Ad",
+    "token": "USDC (0x036CbD53842c5426634e7929541eC2318f3dCF7e)",
+    "humanSmartWallet": "0x8dB0A9f5a76A6657e2d3d6a05f37171ff50B0Ca3",
+    "scout": "0xbf8BFDe4B42baa2F4377B8Ebc5D2602d3080a4D4",
+    "allowedAmountUSDC": "50",
+    "periodSeconds": 86400,
+    "validFrom": "2026-03-15T02:33:53.000Z",
+    "expiresAt": "2026-03-15T03:33:53.000Z",
+    "basescanBase": "https://sepolia.basescan.org/tx/"
+  },
+  "permission": {
+    "account": "0x8dB0A9f5a76A6657e2d3d6a05f37171ff50B0Ca3",
+    "spender": "0xbf8BFDe4B42baa2F4377B8Ebc5D2602d3080a4D4",
+    "token": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    "allowance": "50000000",
+    "period": 86400,
+    "start": 1773542033,
+    "end": 1773545633,
+    "salt": "1773542033",
+    "extraData": "0x"
+  },
+  "results": {
+    "approve": {
+      "status": "success",
+      "txHash": "0x8d1062b7e85345d3c32f4a3f6f8adbcd32965291442406a512a22142315ddc2a",
+      "block": 38886874,
+      "gasUsed": "79176",
+      "basescanUrl": "https://sepolia.basescan.org/tx/0x8d1062b7e85345d3c32f4a3f6f8adbcd32965291442406a512a22142315ddc2a"
+    },
+    "inBoundsSpend": {
+      "status": "success",
+      "description": "Scout spent 50 USDC within the 50 USDC allowance",
+      "txHash": "0xf553c5d6ba2ee668692e65471aae8820f0a7799ebdc6508d7baf76a7cad962a3",
+      "block": 38886876,
+      "gasUsed": "106597",
+      "amountUSDC": "50",
+      "basescanUrl": "https://sepolia.basescan.org/tx/0xf553c5d6ba2ee668692e65471aae8820f0a7799ebdc6508d7baf76a7cad962a3"
+    },
+    "overLimitRevert": {
+      "status": "rejected",
+      "description": "Scout attempted 89 USDC after allowance was exhausted",
+      "errorName": "ExceededSpendPermission",
+      "errorArgs": {}
+    },
+    "expiryRevert": {
+      "status": "rejected",
+      "description": "Scout attempted spend after permission expiry",
+      "errorName": "AfterSpendPermissionEnd",
+      "errorArgs": {}
+    },
+    "wrongSpenderRevert": {
+      "status": "rejected",
+      "description": "Scout attempted to spend under a permission granted to a different spender",
+      "errorName": "InvalidSender",
+      "errorArgs": {}
+    }
+  },
+  "verdict": "Base-native enforcement confirmed. 1 in-bounds action succeeded. 3 out-of-bounds actions rejected onchain by SpendPermissionManager with named errors."
+}
