@@ -1,11 +1,15 @@
 import React from 'react';
 import { Shield, ArrowRight, CheckCircle2, Zap, RefreshCw } from 'lucide-react';
-import { useAccount } from 'wagmi';
+import { useAccount, useReadContract } from 'wagmi';
 import { useDemo } from '@/context/DemoContext';
 import { useLocation } from 'wouter';
 import { AgentAvatar } from '@/components/AgentAvatar';
 import { TruthBadge } from '@/components/TruthBadge';
-import { SCOUT_SPENDER_ADDRESS } from '@/config/spendPermission';
+import {
+  SCOUT_SPENDER_ADDRESS,
+  SPEND_PERMISSION_MANAGER_ADDRESS,
+  SPEND_PERMISSION_MANAGER_ABI,
+} from '@/config/spendPermission';
 
 const SCOUT_ADDRESS_SHORT = `${SCOUT_SPENDER_ADDRESS.slice(0, 6)}...${SCOUT_SPENDER_ADDRESS.slice(-4)}`;
 
@@ -92,25 +96,9 @@ export default function Agent() {
               <span className="ml-auto text-[10px] text-muted-foreground/30 tabular-nums">{activePermissions.length} active</span>
             </div>
             <div className="space-y-3">
-              {activePermissions.map(perm => {
-                const cadenceLabel = { daily: '/day', weekly: '/wk', monthly: '/mo' };
-                const badgeType = perm.isReal && perm.txHash ? 'onchain' as const : 'demo' as const;
-                return (
-                  <div key={perm.id} className="flex items-center gap-3">
-                    <AgentAvatar size="sm" />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-[13px] font-medium text-foreground">{perm.vendor}</span>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <TruthBadge type={badgeType} txHash={perm.txHash} />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-[13px] font-semibold tabular-nums">${perm.amount}{cadenceLabel[perm.cadence]}</span>
-                      <div className={`w-[5px] h-[5px] rounded-full ${perm.state === 'active' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
-                    </div>
-                  </div>
-                );
-              })}
+              {activePermissions.map(perm => (
+                <AgentPermissionRow key={perm.id} perm={perm} />
+              ))}
             </div>
           </div>
         )}
@@ -136,6 +124,54 @@ export default function Agent() {
         <p className="text-[10px] text-muted-foreground/20 font-medium tracking-widest uppercase">
           ERC-8004 · Base Sepolia
         </p>
+      </div>
+    </div>
+  );
+}
+
+function AgentPermissionRow({ perm }: { perm: import('@/context/DemoContext').SpendPermission }) {
+  const cadenceLabel = { daily: '/day', weekly: '/wk', monthly: '/mo' };
+  const permStruct = perm.permissionStruct;
+
+  const { data: isApprovedOnchain } = useReadContract({
+    address: SPEND_PERMISSION_MANAGER_ADDRESS,
+    abi: SPEND_PERMISSION_MANAGER_ABI,
+    functionName: 'isApproved',
+    args: permStruct ? [{
+      account: permStruct.account,
+      spender: permStruct.spender,
+      token: permStruct.token,
+      allowance: BigInt(permStruct.allowance),
+      period: permStruct.period,
+      start: permStruct.start,
+      end: permStruct.end,
+      salt: BigInt(permStruct.salt),
+      extraData: permStruct.extraData,
+    }] : undefined,
+    chainId: 84532,
+    query: { enabled: !!permStruct && !!perm.isReal },
+  });
+
+  let badgeType: 'onchain' | 'demo' | 'pending';
+  if (perm.isReal && perm.txHash) {
+    const verified = isApprovedOnchain ?? perm.onchainVerified;
+    badgeType = verified ? 'onchain' : 'pending';
+  } else {
+    badgeType = 'demo';
+  }
+
+  return (
+    <div className="flex items-center gap-3">
+      <AgentAvatar size="sm" />
+      <div className="flex-1 min-w-0">
+        <span className="text-[13px] font-medium text-foreground">{perm.vendor}</span>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <TruthBadge type={badgeType} txHash={perm.txHash} />
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <span className="text-[13px] font-semibold tabular-nums">${perm.amount}{cadenceLabel[perm.cadence]}</span>
+        <div className={`w-[5px] h-[5px] rounded-full ${perm.state === 'active' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
       </div>
     </div>
   );

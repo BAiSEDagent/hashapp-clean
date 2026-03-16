@@ -1,6 +1,7 @@
 import { useRoute, Link } from 'wouter';
-import { X } from 'lucide-react';
+import { X, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTransactionReceipt, useBlock } from 'wagmi';
 import { useDemo } from '@/context/DemoContext';
 import { AvatarIcon } from '@/components/ui/AvatarIcon';
 import { AgentAvatar } from '@/components/AgentAvatar';
@@ -12,11 +13,29 @@ export default function Receipt() {
   
   const item = feed.find(f => f.id === params?.id);
 
+  const txHash = item?.txHash as `0x${string}` | undefined;
+
+  const { data: txReceipt } = useTransactionReceipt({
+    hash: txHash,
+    chainId: 84532,
+    query: { enabled: !!txHash },
+  });
+
+  const { data: block } = useBlock({
+    blockNumber: txReceipt?.blockNumber,
+    chainId: 84532,
+    query: { enabled: !!txReceipt?.blockNumber },
+  });
+
   if (!item) return <div className="p-8 text-center mt-20 text-muted-foreground">Receipt not found</div>;
 
   const isBlocked = item.status === 'BLOCKED' || item.status === 'DECLINED';
   const hasRealProof = item.isReal && item.txHash;
   const isApprovedOrAuto = item.status === 'APPROVED' || item.status === 'AUTO_APPROVED';
+
+  const confirmedAt = block?.timestamp
+    ? new Date(Number(block.timestamp) * 1000).toLocaleString()
+    : null;
 
   return (
     <motion.div 
@@ -97,6 +116,31 @@ export default function Receipt() {
                 </div>
               </div>
             </div>
+
+            {hasRealProof && (
+              <>
+                <DetailRow label="Network" value="Base Sepolia" />
+                {txReceipt && (
+                  <DetailRow label="Block" value={txReceipt.blockNumber.toString()} />
+                )}
+                {confirmedAt && (
+                  <DetailRow label="Confirmed" value={confirmedAt} />
+                )}
+                <div className="flex items-center justify-between py-4 border-t border-white/[0.05]">
+                  <span className="text-[11px] text-muted-foreground/40 font-medium">Transaction</span>
+                  <a
+                    href={`https://sepolia.basescan.org/tx/${item.txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center gap-1 text-[11px] font-medium text-emerald-400/80 hover:text-emerald-400 transition-colors"
+                  >
+                    {item.txHash!.slice(0, 10)}...{item.txHash!.slice(-6)}
+                    <ExternalLink size={9} />
+                  </a>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

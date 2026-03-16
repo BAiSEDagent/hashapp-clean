@@ -6,7 +6,11 @@ import { AvatarIcon } from '@/components/ui/AvatarIcon';
 import { AgentAvatar } from '@/components/AgentAvatar';
 import { TruthBadge } from '@/components/TruthBadge';
 import { useLocation } from 'wouter';
-import { USDC_BASE_SEPOLIA } from '@/config/spendPermission';
+import {
+  USDC_BASE_SEPOLIA,
+  SPEND_PERMISSION_MANAGER_ADDRESS,
+  SPEND_PERMISSION_MANAGER_ABI,
+} from '@/config/spendPermission';
 import { formatUnits } from 'viem';
 
 const ERC20_BALANCE_ABI = [
@@ -233,7 +237,35 @@ export default function Money() {
 
 function SpendPermissionRow({ permission }: { permission: SpendPermission }) {
   const cadenceLabel = { daily: '/day', weekly: '/wk', monthly: '/mo' };
-  const badgeType = permission.isReal && permission.txHash ? 'onchain' as const : 'demo' as const;
+
+  const permStruct = permission.permissionStruct;
+
+  const { data: isApprovedOnchain } = useReadContract({
+    address: SPEND_PERMISSION_MANAGER_ADDRESS,
+    abi: SPEND_PERMISSION_MANAGER_ABI,
+    functionName: 'isApproved',
+    args: permStruct ? [{
+      account: permStruct.account,
+      spender: permStruct.spender,
+      token: permStruct.token,
+      allowance: BigInt(permStruct.allowance),
+      period: permStruct.period,
+      start: permStruct.start,
+      end: permStruct.end,
+      salt: BigInt(permStruct.salt),
+      extraData: permStruct.extraData,
+    }] : undefined,
+    chainId: 84532,
+    query: { enabled: !!permStruct && !!permission.isReal },
+  });
+
+  let badgeType: 'onchain' | 'demo' | 'pending';
+  if (permission.isReal && permission.txHash) {
+    const verified = isApprovedOnchain ?? permission.onchainVerified;
+    badgeType = verified ? 'onchain' : 'pending';
+  } else {
+    badgeType = 'demo';
+  }
 
   return (
     <div className="flex items-center gap-3.5 p-3 rounded-xl bg-card border border-border/30 hover:border-border/50 transition-colors">

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Loader2, ExternalLink } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useAccount, useWriteContract, useConnect } from 'wagmi';
-import { waitForTransactionReceipt } from 'wagmi/actions';
+import { waitForTransactionReceipt, readContract } from 'wagmi/actions';
 import { walletConfig } from '@/config/wallet';
 import { useDemo, type FeedItem, type StatusType } from '@/context/DemoContext';
 import { AvatarIcon } from '@/components/ui/AvatarIcon';
@@ -84,7 +84,7 @@ export default function Activity() {
                     key={item.id} 
                     item={item} 
                     isLast={i === items.length - 1}
-                    onApprove={(txHash?: string) => approvePending(item.id, txHash)}
+                    onApprove={approvePending}
                     onDecline={() => declinePending(item.id)}
                     onClick={() => {
                       if (item.status !== 'PENDING') {
@@ -111,7 +111,12 @@ function FeedCard({
 }: { 
   item: FeedItem; 
   isLast: boolean;
-  onApprove: (txHash?: string) => void; 
+  onApprove: (
+    id: string,
+    realTxHash?: string,
+    permissionStruct?: import('@/context/DemoContext').SpendPermission['permissionStruct'],
+    onchainVerified?: boolean,
+  ) => void;
   onDecline: () => void;
   onClick: () => void;
 }) {
@@ -170,7 +175,12 @@ function PendingCard({
   onDecline,
 }: {
   item: FeedItem;
-  onApprove: (txHash?: string) => void;
+  onApprove: (
+    id: string,
+    realTxHash?: string,
+    permissionStruct?: import('@/context/DemoContext').SpendPermission['permissionStruct'],
+    onchainVerified?: boolean,
+  ) => void;
   onDecline: () => void;
 }) {
   const { address, isConnected } = useAccount();
@@ -191,23 +201,23 @@ function PendingCard({
       const now = Math.floor(Date.now() / 1000);
       const allowanceRaw = BigInt(Math.round(item.amount * 1_000_000));
 
+      const permissionArgs = {
+        account: address,
+        spender: SCOUT_SPENDER_ADDRESS,
+        token: USDC_BASE_SEPOLIA,
+        allowance: allowanceRaw,
+        period: 86400,
+        start: now,
+        end: now + 3600,
+        salt: BigInt(Date.now()),
+        extraData: '0x' as `0x${string}`,
+      };
+
       const txHash = await writeContractAsync({
         address: SPEND_PERMISSION_MANAGER_ADDRESS,
         abi: SPEND_PERMISSION_MANAGER_ABI,
         functionName: 'approve',
-        args: [
-          {
-            account: address,
-            spender: SCOUT_SPENDER_ADDRESS,
-            token: USDC_BASE_SEPOLIA,
-            allowance: allowanceRaw,
-            period: 86400,
-            start: now,
-            end: now + 3600,
-            salt: BigInt(Date.now()),
-            extraData: '0x' as `0x${string}`,
-          },
-        ],
+        args: [permissionArgs],
       });
 
       const receipt = await waitForTransactionReceipt(walletConfig, { hash: txHash });
@@ -217,8 +227,31 @@ function PendingCard({
         return;
       }
 
+      let onchainVerified = false;
+      try {
+        const approved = await readContract(walletConfig, {
+          address: SPEND_PERMISSION_MANAGER_ADDRESS,
+          abi: SPEND_PERMISSION_MANAGER_ABI,
+          functionName: 'isApproved',
+          args: [permissionArgs],
+        });
+        onchainVerified = !!approved;
+      } catch {}
+
+      const storedStruct = {
+        account: permissionArgs.account,
+        spender: permissionArgs.spender,
+        token: permissionArgs.token,
+        allowance: permissionArgs.allowance.toString(),
+        period: permissionArgs.period,
+        start: permissionArgs.start,
+        end: permissionArgs.end,
+        salt: permissionArgs.salt.toString(),
+        extraData: permissionArgs.extraData,
+      };
+
       setConfirmedHash(txHash);
-      onApprove(txHash);
+      onApprove(item.id, txHash, storedStruct, onchainVerified);
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Transaction failed';
       if (message.includes('User rejected') || message.includes('user rejected')) {

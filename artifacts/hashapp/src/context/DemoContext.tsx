@@ -30,6 +30,18 @@ export interface SpendPermission {
   ruledBy: string;
   txHash?: string;
   isReal?: boolean;
+  onchainVerified?: boolean;
+  permissionStruct?: {
+    account: `0x${string}`;
+    spender: `0x${string}`;
+    token: `0x${string}`;
+    allowance: string;
+    period: number;
+    start: number;
+    end: number;
+    salt: string;
+    extraData: `0x${string}`;
+  };
 }
 
 export interface Rule {
@@ -46,7 +58,12 @@ interface DemoState {
   stage: 'INITIAL' | 'PENDING_ADDED' | 'APPROVED' | 'RULE_DISABLED' | 'BLOCKED_ADDED';
   agentAvatarUrl: string | null;
   setAgentAvatarUrl: (url: string | null) => void;
-  approvePending: (id: string, realTxHash?: string) => void;
+  approvePending: (
+    id: string,
+    realTxHash?: string,
+    permissionStruct?: SpendPermission['permissionStruct'],
+    onchainVerified?: boolean,
+  ) => void;
   declinePending: (id: string) => void;
   toggleRule: (id: string) => void;
   resetDemo: () => void;
@@ -260,7 +277,12 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timer);
   }, [stage]);
 
-  const approvePending = useCallback((id: string, realTxHash?: string) => {
+  const approvePending = useCallback((
+    id: string,
+    realTxHash?: string,
+    permissionStruct?: SpendPermission['permissionStruct'],
+    onchainVerified?: boolean,
+  ) => {
     setFeed(prev => prev.map(item => 
       item.id === id 
         ? { 
@@ -283,6 +305,8 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
       ruledBy: 'r4',
       txHash: realTxHash,
       isReal: !!realTxHash,
+      onchainVerified,
+      permissionStruct,
     }]);
     if (stage === 'PENDING_ADDED') setStage('APPROVED');
   }, [stage]);
