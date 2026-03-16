@@ -23,17 +23,21 @@ MetaMask Smart Accounts Kit + ERC-7715 Advanced Permissions + ERC-7710 delegated
 - receipts with chain readback
 - agent identity / avatar / truth badges
 - MetaMask delegation code path wired in Replit branch
+- one real MetaMask Flask ERC-7715 permission flow opened successfully
+- one real Base Sepolia onchain smart-account upgrade + delegation grant confirmed: `0xb0196df4a6c7a5802704a4f42e839e3ac419d33149ec11a4e03f04db1eca3a35`
+- SDK compatibility fix proved: upgrading `@metamask/smart-accounts-kit` from `0.3.0` to `0.4.0-beta.1` cleared the `Invalid parameters were provided to the RPC method` blocker
 
 ## What is not yet proven live
-- one real MetaMask/Flask permission grant
+- app-side capture of returned `permissionsContext` + `delegationManager` after the grant
 - one real delegated spend redemption in product
 - end-to-end tx proof inside the live app using the delegation rail
 
 ## Current blocker
-Browser-side MetaMask Flask grant step must be completed in a real browser.
+Frontend response parsing still expects the old SDK response shape and throws `No signer metadata in granted permission` after a successful onchain grant.
 
 ## Single next move
-Run one live delegated loop:
-1. grant permission in Flask
-2. redeem one spend
-3. verify Activity + Receipt proof
+Patch the new `requestExecutionPermissions(...)` response parsing:
+1. inspect actual returned object in `0.4.0-beta.1`
+2. extract `permissionsContext` + `delegationManager` from the new shape
+3. redeem one spend
+4. verify Activity + Receipt proof

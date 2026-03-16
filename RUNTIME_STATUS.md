@@ -8,10 +8,12 @@
 - MetaMask delegation code path is wired in Replit branch
 - Scout session key loads correctly server-side
 - `/api/delegation/spend` reaches chain with a dummy permissionsContext
+- MetaMask Flask 13.19.0 accepts the updated ERC-7715 request from the app
+- live Flask permission UI renders correctly for Base Sepolia / USDC / Scout recipient
+- one real onchain smart-account upgrade + delegation grant confirmed on Base Sepolia: `0xb0196df4a6c7a5802704a4f42e839e3ac419d33149ec11a4e03f04db1eca3a35`
 
 ## Wired but not yet proven live
-- `requestExecutionPermissions(...)` in MetaMask Flask
-- storage of `permissionsContext` + `delegationManager`
+- storage of `permissionsContext` + `delegationManager` from the new SDK response shape
 - one real delegated spend redemption from the product UI
 - live tx proof in Activity/Receipt for the MetaMask rail
 
