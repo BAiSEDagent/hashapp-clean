@@ -93,8 +93,13 @@ delegationRouter.post('/delegation/spend', async (req, res) => {
 
     res.json({ txHash, success: true });
   } catch (error: unknown) {
+    const err = error as Record<string, unknown>;
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Delegation spend error:', message);
+    console.error('[DelegationSpend] ERROR:', message);
+    console.error('[DelegationSpend] Error code:', err?.code);
+    console.error('[DelegationSpend] Error data:', JSON.stringify(err?.data));
+    console.error('[DelegationSpend] Error details:', err?.details);
+    console.error('[DelegationSpend] Full error:', JSON.stringify(err, Object.getOwnPropertyNames(err as object), 2));
     res.status(500).json({ error: message });
   }
 });

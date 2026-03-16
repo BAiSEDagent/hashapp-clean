@@ -231,6 +231,62 @@ export default function Receipt() {
               </>
             )}
           </div>
+
+          {canSpend && (
+            <div className="w-full mt-6 space-y-3">
+              <button
+                onClick={handleDelegatedSpend}
+                disabled={isSpending}
+                className="w-full py-3 rounded-xl text-[13px] font-semibold text-primary-foreground bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25 active:scale-[0.98] transition-all disabled:opacity-70 disabled:pointer-events-none flex items-center justify-center gap-2"
+              >
+                {isSpending ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    Executing spend…
+                  </>
+                ) : (
+                  <>
+                    <Zap size={14} />
+                    Test Delegated Spend ($5 USDC)
+                  </>
+                )}
+              </button>
+              <p className="text-[10px] text-muted-foreground/40 text-center">
+                Redeems $5 USDC from the granted delegation via Scout session key
+              </p>
+            </div>
+          )}
+
+          {spendError && (
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full mt-4 px-4 py-3 rounded-xl bg-rose-500/10 border border-rose-500/20"
+            >
+              <p className="text-[11px] text-rose-400 break-all">{spendError}</p>
+            </motion.div>
+          )}
+
+          {spendTxHash && (
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full mt-4 space-y-2"
+            >
+              <div className="px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                <p className="text-[12px] text-emerald-400 font-medium mb-1">Delegated spend executed!</p>
+                <a
+                  href={`https://sepolia.basescan.org/tx/${spendTxHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-400/80 hover:text-emerald-400 transition-colors"
+                >
+                  <ExternalLink size={10} />
+                  {spendTxHash.slice(0, 14)}...{spendTxHash.slice(-6)} — View on BaseScan
+                </a>
+              </div>
+            </motion.div>
+          )}
         </div>
       </div>
     </motion.div>

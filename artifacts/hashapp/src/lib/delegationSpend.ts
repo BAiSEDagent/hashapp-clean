@@ -15,7 +15,7 @@ export interface DelegationSpendResult {
 export async function executeDelegationSpend(
   params: DelegationSpendParams,
 ): Promise<DelegationSpendResult> {
-  const apiBase = import.meta.env.VITE_API_BASE_URL || '/api-server/api';
+  const apiBase = import.meta.env.VITE_API_BASE_URL || '/api';
   const response = await fetch(`${apiBase}/delegation/spend`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
