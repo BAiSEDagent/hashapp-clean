@@ -1,0 +1,91 @@
+Audit the refinement pass you just shipped in commit 15a04d0f.
+
+This is not a new build task.
+This is a tight audit only.
+
+Context
+Your refinement pass landed on:
+frontend/truth-pass
+
+Current active engineering branch is:
+integration/truth-pass-clean
+
+Before we port anything, I need an audit that tells me whether your pass preserved current repo truth and what will conflict during merge.
+Audit only these questions
+Did your pass preserve all current repo-side chain truth?
+Explicitly verify whether your work preserved these without regression:
+
+real wallet balance read
+isApproved() verification after Grant Permission
+receipt chain readback:
+useTransactionReceipt
+useBlock
+block number
+confirmation timestamp
+tx explorer proof links
+server-side spend executor scaffold remaining untouched
+
+For each item, answer:
+preserved
+changed
+regressed
+with one line why
+
+---
+
+Did your pass regress any live user flow?
+Check these specifically:
+
+Activity approval flow
+Money permission verification
+Receipt route rendering
+avatar persistence
+reset demo behavior
+
+For each, answer:
+ok
+risk
+broken
+
+If risk/broken, say exactly where.
+
+---
+
+Did you touch anything outside the 8 claimed files?
+Return:
+exact files changed
+whether any generated / incidental / unmentioned files were changed
+
+---
+
+What conflicts should I expect when porting this into integration/truth-pass-clean?
+I want a practical merge audit, not a theory dump.
+Call out:
+files likely to conflict
+whether your branch copied older versions of files from before repo-side chain verification landed
+any logic overlaps with commits already on integration/truth-pass-clean
+
+Especially mention overlap/conflict risk in:
+Money.tsx
+Agent.tsx
+Receipt.tsx
+DemoContext.tsx
+Activity.tsx
+spendPermission.ts
+
+---
+
+Output format
+Return exactly:
+commit
+files changed
+preservation audit
+flow regression audit
+merge conflict audit
+recommended port strategy
+
+Keep it short, concrete, and technical.
+No more build diary.
+No redesign ideas.
+No new implementation.
+Audit only.
