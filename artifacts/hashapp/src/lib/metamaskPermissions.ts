@@ -85,6 +85,7 @@ export async function requestDelegatedPermission(
     console.error('[Delegation] Error data:', error?.data);
     console.error('[Delegation] Error details:', error?.details);
     console.error('[Delegation] Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    console.error('[Delegation] Raw error object:', err);
     throw err;
   }
 }
