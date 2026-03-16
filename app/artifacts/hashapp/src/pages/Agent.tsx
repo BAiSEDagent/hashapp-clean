@@ -67,6 +67,15 @@ export default function Agent() {
             <Zap size={14} className="text-muted-foreground/40" />
             <span className="text-[12px] font-semibold text-muted-foreground/50 uppercase tracking-wider">Operating State</span>
           </div>
+          <div className="mb-4 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[11px] text-muted-foreground/40">Authority model</span>
+              <span className="text-[11px] font-medium text-foreground/85">Delegated spend authority</span>
+            </div>
+            <p className="text-[10px] text-muted-foreground/30 leading-relaxed mt-2">
+              Your wallet stays in control. Scout only acts through bounded permissions or delegated authority you approve.
+            </p>
+          </div>
           <div className="space-y-3">
             <StateRow label="Status" value="Active" valueColor="text-emerald-400" />
             <StateRow label="Spender address" value={SCOUT_ADDRESS_SHORT} mono />

@@ -74,7 +74,7 @@ export default function Money() {
                 <div className="flex items-center gap-2 mb-2">
                   <Wallet size={13} className="text-muted-foreground/50" />
                   <span className="text-[12px] text-muted-foreground/60 font-medium">
-                    Wallet Balance (USDC)
+                    Live Balance (USDC)
                   </span>
                   <TruthBadge type="onchain" />
                 </div>
@@ -84,13 +84,16 @@ export default function Money() {
                 <p className="text-[12px] text-muted-foreground/40">
                   USDC · {chain?.name || 'Base Sepolia'} · {truncatedAddress}
                 </p>
+                <p className="text-[10px] text-muted-foreground/30 mt-2 leading-relaxed">
+                  Your wallet stays in control. Scout acts through delegated permissions or approved spend authority — Hashapp never takes custody.
+                </p>
               </>
             ) : (
               <>
                 <div className="flex items-center gap-2 mb-2">
                   <Wallet size={13} className="text-muted-foreground/50" />
                   <span className="text-[12px] text-muted-foreground/60 font-medium">
-                    Wallet Balance
+                    Live Balance
                   </span>
                 </div>
                 <h2 className="text-[48px] font-bold tracking-tighter text-foreground leading-none mb-1.5">
@@ -99,7 +102,7 @@ export default function Money() {
                 <p className="text-[12px] text-muted-foreground/40 leading-relaxed">
                   Connect a wallet to see your real USDC balance.
                   <br />
-                  <span className="text-muted-foreground/30">Spend permissions and activity below are demo data — not drawn from a real wallet.</span>
+                  <span className="text-muted-foreground/30">Scout only gets bounded authority you approve. Spend permissions and activity below are still demo data until a real wallet is connected.</span>
                 </p>
               </>
             )}
@@ -200,18 +203,22 @@ export default function Money() {
           ) : (
             <div className="pl-10">
               <p className="text-[10px] text-muted-foreground/35 leading-relaxed mb-3">
-                Connect a wallet to enable real spend permissions on Base. Hashapp never takes custody of your funds.
+                Connect a wallet to enable real spend permissions on Base. Hashapp never takes custody of your funds. MetaMask is the recommended path for delegated permissions.
               </p>
               <div className="flex flex-wrap gap-2">
-                {connectors.map((connector) => (
-                  <button
-                    key={connector.uid}
-                    onClick={() => connect({ connector })}
-                    className="text-[11px] font-medium text-primary/80 bg-primary/8 hover:bg-primary/12 px-3 py-1.5 rounded-lg transition-colors"
-                  >
-                    {connector.name}
-                  </button>
-                ))}
+                {connectors.map((connector) => {
+                  const isInjected = connector.name === 'Injected';
+                  const label = isInjected ? 'MetaMask / Injected (recommended)' : connector.name;
+                  return (
+                    <button
+                      key={connector.uid}
+                      onClick={() => connect({ connector })}
+                      className="text-[11px] font-medium text-primary/80 bg-primary/8 hover:bg-primary/12 px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
