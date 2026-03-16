@@ -80,11 +80,13 @@ delegationRouter.post('/delegation/spend', async (req, res) => {
     });
 
     const txHash = await walletClient.sendTransactionWithDelegation({
+      account: sessionAccount,
+      chain: baseSepolia,
       to: tokenAddress as `0x${string}`,
       data: calldata,
       permissionsContext: permissionsContext as `0x${string}`,
       delegationManager: delegationManager as `0x${string}`,
-    });
+    } as Parameters<typeof walletClient.sendTransactionWithDelegation>[0]);
 
     res.json({ txHash, success: true });
   } catch (error: unknown) {

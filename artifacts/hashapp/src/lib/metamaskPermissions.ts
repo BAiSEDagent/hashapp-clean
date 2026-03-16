@@ -1,4 +1,4 @@
-import { createWalletClient, custom, parseUnits } from 'viem';
+import { type EIP1193Provider, createWalletClient, custom, parseUnits } from 'viem';
 import { erc7715ProviderActions } from '@metamask/smart-accounts-kit/actions';
 import {
   DELEGATION_CHAIN,
@@ -7,6 +7,12 @@ import {
   PERMISSION_PERIOD_DURATION,
   PERMISSION_EXPIRY_SECONDS,
 } from '@/config/delegation';
+
+declare global {
+  interface Window {
+    ethereum?: EIP1193Provider;
+  }
+}
 
 export interface GrantedDelegation {
   permissionsContext: `0x${string}`;
@@ -50,8 +56,17 @@ export async function requestDelegatedPermission(
     },
   ]);
 
-  const permissionsContext = grantedPermissions[0].context as `0x${string}`;
-  const delegationManager = grantedPermissions[0].signerMeta.delegationManager as `0x${string}`;
+  const firstPermission = grantedPermissions[0];
+  if (!firstPermission) {
+    throw new Error('No permissions returned from wallet');
+  }
+
+  const permissionsContext = firstPermission.context as `0x${string}`;
+  const signerMeta = firstPermission.signerMeta;
+  if (!signerMeta) {
+    throw new Error('No signer metadata in granted permission');
+  }
+  const delegationManager = signerMeta.delegationManager as `0x${string}`;
 
   return {
     permissionsContext,
