@@ -21,6 +21,10 @@ Track product improvements separately from plumbing truth issues.
 - [ ] Refine spend permission object visibility and control
 - [ ] Add “why approved / why blocked” explanation layer
 - [ ] Explore permission presets / personalities
+- [ ] Parallel track: Uniswap Trading API integration for Scout swap capability after delegation proof closes
+  - pass 1 should be backend-only, Scout-executed, Base Sepolia, CLASSIC route only
+  - use real `UNISWAP_API_KEY` via env, never hardcoded
+  - prove one real swap tx before any frontend swap panel or autonomous swap-then-pay chaining
 
 ## P2 — Optional polish / track leverage
 - [ ] Add stronger but honest Base value cue (speed / low-cost settlement)

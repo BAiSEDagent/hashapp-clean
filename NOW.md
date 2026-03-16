@@ -24,3 +24,9 @@ The grant now succeeds onchain, but frontend response parsing still throws `No s
 - no new branch sprawl
 - no re-litigation of the old Coinbase EOA rail
 - no broadening scope before the delegated loop is proven
+
+## Parallel research lane
+A separate agent may scope Uniswap Trading API integration, but shipping priority remains:
+1. finish post-grant response parsing
+2. prove one delegated spend end-to-end
+3. then merge the shortest real Uniswap slice
