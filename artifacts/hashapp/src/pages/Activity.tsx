@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, Loader2, ExternalLink } from 'lucide-react';
+import { ShieldCheck, Loader2, ExternalLink, ArrowDownUp } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useAccount, useWriteContract, useConnect } from 'wagmi';
 import { waitForTransactionReceipt, readContract } from 'wagmi/actions';
@@ -145,6 +145,8 @@ function FeedCard({
     }
   }
 
+  const isSwap = item.type === 'SWAP';
+
   return (
     <motion.div
       layout
@@ -159,11 +161,19 @@ function FeedCard({
         ${!isLast ? 'border-b border-white/[0.04]' : ''}
       `}
     >
-      <AvatarIcon initial={item.merchantInitial} colorClass={item.merchantColor} size="md" className={isBlocked ? 'opacity-60' : ''} />
+      {isSwap ? (
+        <div className="w-10 h-10 rounded-full bg-pink-500/15 flex items-center justify-center shrink-0">
+          <ArrowDownUp size={16} className="text-pink-400" />
+        </div>
+      ) : (
+        <AvatarIcon initial={item.merchantInitial} colorClass={item.merchantColor} size="md" className={isBlocked ? 'opacity-60' : ''} />
+      )}
       
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-baseline mb-1">
-          <h3 className={`text-[14px] font-semibold truncate pr-3 ${isBlocked ? 'text-foreground/50' : 'text-foreground'}`}>{item.merchant}</h3>
+          <h3 className={`text-[14px] font-semibold truncate pr-3 ${isBlocked ? 'text-foreground/50' : 'text-foreground'}`}>
+            {isSwap ? 'Swap' : item.merchant}
+          </h3>
           <span className={`text-[14px] font-semibold tabular-nums shrink-0 ${isBlocked ? 'text-muted-foreground/35 line-through decoration-rose-500/40' : 'text-foreground'}`}>
             {item.amountStr}
           </span>
@@ -177,6 +187,15 @@ function FeedCard({
             <StatusDot status={item.status} />
           </div>
         </div>
+        {isSwap && item.swapDetails && isApprovedOrAuto && (
+          <div className="flex gap-3 mt-1.5 text-[9px] text-muted-foreground/35">
+            <span>Rate: 1 {item.swapDetails.tokenInSymbol} = {item.swapDetails.exchangeRate} {item.swapDetails.tokenOutSymbol}</span>
+            <span>Gas: ${parseFloat(item.swapDetails.gasCostUSD).toFixed(4)}</span>
+            {item.swapDetails.priceImpact !== undefined && (
+              <span>Impact: {item.swapDetails.priceImpact.toFixed(2)}%</span>
+            )}
+          </div>
+        )}
       </div>
     </motion.div>
   );

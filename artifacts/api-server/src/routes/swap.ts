@@ -1,79 +1,161 @@
 import { Router } from 'express';
-import { isAddress, parseUnits } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
+import { isAddress } from 'viem';
 import {
-  TOKEN_ALLOWLIST,
-  SLIPPAGE_CEILING,
   checkApproval,
   getQuote,
   executeSwap,
+  executeSwapWithScoutWallet,
+  estimateUsdFromTokenAmount,
+  APPROVED_TOKENS,
+  TOKEN_DECIMALS,
+  CHAIN_ID,
 } from '../lib/uniswap.js';
 
 const swapRouter = Router();
 
-/**
- * POST /swap
- *
- * Example request body:
- * {
- *   "tokenIn": "0x0000000000000000000000000000000000000000",
- *   "tokenOut": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
- *   "amount": "0.001",
- *   "type": "EXACT_INPUT"
- * }
- *
- * tokenIn/tokenOut: token addresses (use 0x000...000 for native ETH)
- * amount: human-readable amount (e.g. "0.001" for 0.001 ETH)
- * type: "EXACT_INPUT" or "EXACT_OUTPUT"
- */
-swapRouter.post('/swap', async (req, res) => {
+const MAX_SWAP_AMOUNT_USD = 50;
+const MAX_SLIPPAGE = 1;
+
+function isApprovedToken(addr: string): boolean {
+  return !!APPROVED_TOKENS[addr] || !!APPROVED_TOKENS[addr.toLowerCase()];
+}
+
+function validateSwapRules(tokenIn: string, tokenOut: string, slippage: number, amountUsd: number): string | null {
+  if (!isApprovedToken(tokenIn)) return `Token ${tokenIn} not in approved list`;
+  if (!isApprovedToken(tokenOut)) return `Token ${tokenOut} not in approved list`;
+  if (slippage > MAX_SLIPPAGE) return `Slippage tolerance ${slippage}% exceeds maximum of ${MAX_SLIPPAGE}%`;
+  if (amountUsd > 0 && amountUsd > MAX_SWAP_AMOUNT_USD) return `Swap amount $${amountUsd} exceeds per-swap cap of $${MAX_SWAP_AMOUNT_USD}`;
+  return null;
+}
+
+function requireScoutAuth(authHeader: string | undefined): boolean {
+  const token = process.env.SCOUT_API_TOKEN;
+  if (!token) return false;
+  if (!authHeader) return false;
+  const provided = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+  return provided === token;
+}
+
+swapRouter.post('/swap/quote', async (req, res) => {
   try {
-    const { tokenIn, tokenOut, amount, type } = req.body;
+    const { tokenIn, tokenOut, amount, swapper, slippageTolerance } = req.body;
 
-    if (!tokenIn || !tokenOut || !amount || !type) {
-      res.status(400).json({ error: 'Missing required fields: tokenIn, tokenOut, amount, type' });
+    if (!tokenIn || !tokenOut || !amount || !swapper) {
+      res.status(400).json({ error: 'Missing required fields: tokenIn, tokenOut, amount, swapper' });
       return;
     }
 
-    if (!isAddress(tokenIn) || !isAddress(tokenOut)) {
-      res.status(400).json({ error: 'Invalid token address' });
+    const slippage = slippageTolerance ?? 0.5;
+    const estimatedUsd = estimateUsdFromTokenAmount(tokenIn, amount);
+    const ruleError = validateSwapRules(tokenIn, tokenOut, slippage, estimatedUsd);
+    if (ruleError) {
+      res.status(403).json({ error: ruleError });
       return;
     }
 
-    if (type !== 'EXACT_INPUT' && type !== 'EXACT_OUTPUT') {
-      res.status(400).json({ error: 'type must be EXACT_INPUT or EXACT_OUTPUT' });
+    const approvalResult = await checkApproval(tokenIn, amount, swapper);
+
+    const quoteResult = await getQuote({
+      tokenIn,
+      tokenOut,
+      amount,
+      swapper,
+      slippageTolerance: slippage,
+    });
+
+    res.json({
+      approval: approvalResult.approval,
+      quote: quoteResult.quote,
+      routing: quoteResult.routing,
+      outputAmount: quoteResult.outputAmount,
+      gasFeeUSD: quoteResult.gasFeeUSD,
+      priceImpact: quoteResult.priceImpact,
+      chainId: CHAIN_ID,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Quote failed';
+    console.error('Swap quote error:', message);
+    res.status(500).json({ error: message });
+  }
+});
+
+swapRouter.post('/swap/execute', async (req, res) => {
+  try {
+    const { quote, mode, tokenIn, tokenOut, slippage, routing } = req.body;
+
+    if (!quote) {
+      res.status(400).json({ error: 'Missing required field: quote' });
       return;
     }
 
-    const tokenInNorm = tokenIn.toLowerCase();
-    const tokenOutNorm = tokenOut.toLowerCase();
-
-    const tokenInConfig = TOKEN_ALLOWLIST[tokenInNorm];
-    const tokenOutConfig = TOKEN_ALLOWLIST[tokenOutNorm];
-
-    if (!tokenInConfig) {
-      res.status(403).json({ error: `tokenIn not in allowlist. Allowed: ${Object.keys(TOKEN_ALLOWLIST).join(', ')}` });
+    if (!tokenIn || !tokenOut) {
+      res.status(400).json({ error: 'Missing required fields: tokenIn, tokenOut' });
       return;
     }
 
-    if (!tokenOutConfig) {
-      res.status(403).json({ error: `tokenOut not in allowlist. Allowed: ${Object.keys(TOKEN_ALLOWLIST).join(', ')}` });
+    const sl = slippage ?? 0.5;
+
+    const quoteObj = (quote.quote ?? quote) as Record<string, unknown>;
+    const inputAmount = (quoteObj.amount as string) ?? (quote.amount as string) ?? '0';
+    const estimatedUsd = estimateUsdFromTokenAmount(tokenIn, inputAmount);
+    const ruleError = validateSwapRules(tokenIn, tokenOut, sl, estimatedUsd);
+    if (ruleError) {
+      res.status(403).json({ error: ruleError });
       return;
     }
 
-    const amountNum = Number(amount);
-    if (isNaN(amountNum) || amountNum <= 0) {
-      res.status(400).json({ error: 'amount must be a positive number' });
+    if (mode === 'scout') {
+      if (!requireScoutAuth(req.headers.authorization)) {
+        res.status(401).json({ error: 'Unauthorized: valid SCOUT_API_TOKEN required for scout mode' });
+        return;
+      }
+      const txHash = await executeSwapWithScoutWallet(
+        quote,
+        tokenIn,
+        quote.quote?.amount ?? quote.amount,
+        routing,
+      );
+      res.json({ txHash, success: true });
       return;
     }
 
-    const amountToken = type === 'EXACT_INPUT' ? tokenInConfig : tokenOutConfig;
-    const capToken = type === 'EXACT_INPUT' ? tokenInConfig : tokenOutConfig;
-    const maxAmount = Number(capToken.maxAmount);
-    if (amountNum > maxAmount) {
-      res.status(400).json({
-        error: `Amount exceeds per-swap cap: max ${capToken.maxAmount} ${capToken.symbol}`,
-      });
+    const { tx } = await executeSwap(quote, routing);
+    res.json({ tx, success: true });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Swap execution failed';
+    console.error('Swap execute error:', message);
+    res.status(500).json({ error: message });
+  }
+});
+
+swapRouter.post('/swap/scout-swap-and-pay', async (req, res) => {
+  try {
+    if (!requireScoutAuth(req.headers.authorization)) {
+      res.status(401).json({ error: 'Unauthorized: valid SCOUT_API_TOKEN required' });
+      return;
+    }
+
+    const { tokenIn, tokenOut, amount, recipient, paymentAmountUsdc } = req.body;
+
+    if (!tokenIn || !tokenOut || !amount || !recipient || !paymentAmountUsdc) {
+      res.status(400).json({ error: 'Missing required fields: tokenIn, tokenOut, amount, recipient, paymentAmountUsdc' });
+      return;
+    }
+
+    if (!isAddress(recipient)) {
+      res.status(400).json({ error: 'Invalid recipient address' });
+      return;
+    }
+
+    const payAmount = Number(paymentAmountUsdc);
+    if (isNaN(payAmount) || payAmount <= 0 || payAmount > MAX_SWAP_AMOUNT_USD) {
+      res.status(400).json({ error: `Payment amount must be between 0 and ${MAX_SWAP_AMOUNT_USD} USDC` });
+      return;
+    }
+
+    const ruleError = validateSwapRules(tokenIn, tokenOut, 0.5, payAmount);
+    if (ruleError) {
+      res.status(403).json({ error: ruleError });
       return;
     }
 
@@ -83,56 +165,76 @@ swapRouter.post('/swap', async (req, res) => {
       return;
     }
 
-    const key = rawKey.startsWith('0x') ? rawKey : `0x${rawKey}`;
-    const account = privateKeyToAccount(key as `0x${string}`);
-    const swapper = account.address;
+    const { privateKeyToAccount } = await import('viem/accounts');
+    const { createWalletClient, createPublicClient, http, encodeFunctionData, erc20Abi, parseUnits } = await import('viem');
+    const { baseSepolia } = await import('viem/chains');
 
-    const amountRaw = parseUnits(amount, amountToken.decimals).toString();
+    const sessionKey = (rawKey.startsWith('0x') ? rawKey : `0x${rawKey}`) as `0x${string}`;
+    const account = privateKeyToAccount(sessionKey);
 
-    console.log(`[swap] ${amount} ${tokenInConfig.symbol} → ${tokenOutConfig.symbol} (${type}) swapper=${swapper}`);
-
-    const approvalAmountRaw = type === 'EXACT_INPUT'
-      ? amountRaw
-      : parseUnits(tokenInConfig.maxAmount, tokenInConfig.decimals).toString();
-
-    const approvalResult = await checkApproval({
-      token: tokenIn,
-      amount: approvalAmountRaw,
-      walletAddress: swapper,
-    });
-
-    if (approvalResult.approval) {
-      res.status(400).json({
-        error: 'Token approval (Permit2) is required before swapping this token. Approval transactions are not yet supported in this endpoint.',
-      });
-      return;
-    }
-
-    const quoteResponse = await getQuote({
+    const quoteResult = await getQuote({
       tokenIn,
       tokenOut,
-      amount: amountRaw,
-      type: type as 'EXACT_INPUT' | 'EXACT_OUTPUT',
-      swapper,
-      slippageTolerance: SLIPPAGE_CEILING,
+      amount,
+      swapper: account.address,
+      slippageTolerance: 0.5,
     });
 
-    console.log(`[swap] Quote received, gasFeeUSD=${quoteResponse.gasFeeUSD ?? 'unknown'}`);
+    const swapTxHash = await executeSwapWithScoutWallet(
+      quoteResult.quote,
+      tokenIn,
+      amount,
+      quoteResult.routing,
+    );
 
-    const result = await executeSwap(quoteResponse);
+    const walletClient = createWalletClient({
+      account,
+      chain: baseSepolia,
+      transport: http(),
+    });
 
-    console.log(`[swap] Transaction broadcasted: ${result.txHash}`);
+    const publicClient = createPublicClient({
+      chain: baseSepolia,
+      transport: http(),
+    });
+
+    const usdcAddress = '0x036CbD53842c5426634e7929541eC2318f3dCF7e' as `0x${string}`;
+    const calldata = encodeFunctionData({
+      abi: erc20Abi,
+      functionName: 'transfer',
+      args: [recipient as `0x${string}`, parseUnits(payAmount.toFixed(6), 6)],
+    });
+
+    const payTxHash = await walletClient.sendTransaction({
+      to: usdcAddress,
+      data: calldata,
+      chain: baseSepolia,
+    });
+
+    await publicClient.waitForTransactionReceipt({ hash: payTxHash });
 
     res.json({
       success: true,
-      txHash: result.txHash,
-      gasFeeUSD: result.gasFeeUSD,
+      swapTxHash,
+      paymentTxHash: payTxHash,
+      outputAmount: quoteResult.outputAmount,
+      gasFeeUSD: quoteResult.gasFeeUSD,
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[swap] Error:', message);
+    const message = error instanceof Error ? error.message : 'Swap-and-pay failed';
+    console.error('Scout swap-and-pay error:', message);
     res.status(500).json({ error: message });
   }
+});
+
+swapRouter.get('/swap/tokens', (_req, res) => {
+  const tokens = Object.entries(APPROVED_TOKENS).map(([address, symbol]) => ({
+    address,
+    symbol,
+    decimals: TOKEN_DECIMALS[address] ?? 18,
+    chainId: CHAIN_ID,
+  }));
+  res.json({ tokens });
 });
 
 export default swapRouter;

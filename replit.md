@@ -62,7 +62,7 @@ Hashapp — consumer-grade dark premium spending app for AI agents. Demo-only fr
 - **Wallet connection**: wagmi + viem configured for Base Sepolia (injected + Coinbase Wallet connectors). Shows real wallet address when connected, honest "No Wallet Connected" when not. Connect buttons rendered from wagmi connectors list.
 - **Demo Flow**: Load → 3s pause → pending spend permission slides in → user approves → navigate to Rules → toggle off "Block spend permissions (recurring)" → return to Activity → 2s → new blocked entry appears
 - **Honesty rules**: No fake tx hashes in hardcoded feed. Receipt shows "Demo transaction · no onchain proof" for demo items. Basescan links only appear when `isReal && txHash`. Rules footer: "Rules managed by Hashapp" (not "enforced onchain"). Agent footer: "ERC-8004 · Base Sepolia" (no fake token ID). Dead CTAs removed (no "Increase limit", "Adjust budget", "Pause Scout").
-- **Persistence**: localStorage (key: `hashapp_demo_state`, version 2) persists feed, rules, spendPermissions, and stage across refreshes.
+- **Persistence**: localStorage (key: `hashapp_demo_state`, version 5) persists feed, rules, spendPermissions, and stage across refreshes.
 - **Key Design**: Intent-aware language ("Scout bought research credits..."), plain-English rules, honest onchain references only when backed by real proof, spend permission terminology for recurring charges
 - **MetaMask Delegation Pivot**: Feature-gated behind `VITE_USE_METAMASK_DELEGATION=true`. Replaces Coinbase SpendPermissionManager with MetaMask Smart Accounts Kit + ERC-7715/ERC-7710 Delegation Framework. Key files:
   - `src/config/delegation.ts` — feature flag, chain, USDC address, DelegationManager address, session account address
@@ -81,8 +81,14 @@ Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` 
 - App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
 - Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
 - Delegation route: `src/routes/delegation.ts` — `POST /api/delegation/spend` executes ERC-7710 delegated USDC transfers server-side using `SCOUT_PRIVATE_KEY`. Enforces token allowlist (USDC only), delegation manager address check, amount bounds ($0–$1000), and address format validation.
-- Swap route: `src/routes/swap.ts` — `POST /api/swap` executes real token swaps on Base Sepolia via Uniswap Trading API. Uses the 3-step flow (check_approval → quote → swap), signs and broadcasts with Scout's wallet (`SCOUT_PRIVATE_KEY`). Safety: token allowlist (ETH + USDC), per-swap cap (0.01 ETH / 50 USDC), slippage ceiling (2%), CLASSIC routing only.
-- Uniswap service: `src/lib/uniswap.ts` — wraps Uniswap Trading API 3-step flow (checkApproval, getQuote, executeSwap). Forces CLASSIC routing, strips null permitData, uses `UNISWAP_API_KEY` env var.
+- Swap routes: `src/routes/swap.ts` — Uniswap Trading API integration:
+  - `POST /api/swap/quote` — Gets a swap quote (check_approval + quote). Server-side validates token allowlist, slippage cap (1%), USD per-swap cap ($50 via estimateUsdFromTokenAmount).
+  - `POST /api/swap/execute` — Executes a swap. Mode: `scout` (backend wallet signs, requires SCOUT_API_TOKEN) or `user` (returns unsigned tx). Validates token allowlist + slippage + server-side USD cap.
+  - `POST /api/swap/scout-swap-and-pay` — Autonomous swap-then-pay: swaps tokens via Uniswap then transfers USDC to a vendor. Requires SCOUT_API_TOKEN. Validates paymentAmountUsdc against $50 cap.
+  - `GET /api/swap/tokens` — Returns approved token list.
+  - Auth: Scout wallet endpoints use default-deny (returns 401 when SCOUT_API_TOKEN is unset or missing).
+- Uniswap service: `src/lib/uniswap.ts` — Wraps the Uniswap Trading API 3-step flow (check_approval → quote → swap). Handles CLASSIC and UniswapX response shapes, strips null permitData, sends chain IDs as strings. executeSwapWithScoutWallet handles Permit2 approval before swap. estimateUsdFromTokenAmount derives USD value server-side from token address + raw amount.
+- Env vars needed: `UNISWAP_API_KEY` (from Uniswap Developer Platform), `SCOUT_PRIVATE_KEY` (Scout's backend wallet), `SCOUT_API_TOKEN` (auth for Scout endpoints)
 - Depends on: `@workspace/db`, `@workspace/api-zod`
 - `pnpm --filter @workspace/api-server run dev` — run the dev server
 - `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)

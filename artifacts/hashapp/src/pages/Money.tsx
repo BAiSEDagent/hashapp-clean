@@ -5,6 +5,7 @@ import { useDemo, type SpendPermission } from '@/context/DemoContext';
 import { AvatarIcon } from '@/components/ui/AvatarIcon';
 import { AgentAvatar } from '@/components/AgentAvatar';
 import { TruthBadge } from '@/components/TruthBadge';
+import { SwapPanel } from '@/components/SwapPanel';
 import { useLocation } from 'wouter';
 import { USE_METAMASK_DELEGATION } from '@/config/delegation';
 import { executeDelegationSpend } from '@/lib/delegationSpend';
@@ -123,6 +124,8 @@ export default function Money() {
             )}
           </div>
         </div>
+
+        <SwapPanel />
 
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-card rounded-2xl p-4 border border-border/30">

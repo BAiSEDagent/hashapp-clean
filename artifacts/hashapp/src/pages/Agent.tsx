@@ -1,5 +1,5 @@
-import React from 'react';
-import { Shield, ArrowRight, CheckCircle2, Zap, RefreshCw } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { Shield, ArrowRight, CheckCircle2, Zap, RefreshCw, ArrowLeftRight } from 'lucide-react';
 import { useAccount, useReadContract } from 'wagmi';
 import { useDemo } from '@/context/DemoContext';
 import { useLocation } from 'wouter';
@@ -17,9 +17,11 @@ const scoutAddress = USE_METAMASK_DELEGATION ? SCOUT_SESSION_ADDRESS : SCOUT_SPE
 const SCOUT_ADDRESS_SHORT = `${scoutAddress.slice(0, 6)}...${scoutAddress.slice(-4)}`;
 
 export default function Agent() {
-  const { rules, feed, spendPermissions } = useDemo();
+  const { rules, feed, spendPermissions, recordScoutSwapAndPay } = useDemo();
   const { address, isConnected } = useAccount();
   const [, setLocation] = useLocation();
+  const [scoutPayState, setScoutPayState] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
+  const [scoutPayError, setScoutPayError] = useState<string | null>(null);
   const activeRulesCount = rules.filter(r => r.enabled).length;
   const approvedCount = feed.filter(i => i.status === 'APPROVED' || i.status === 'AUTO_APPROVED').length;
   const blockedCount = feed.filter(i => i.status === 'BLOCKED').length;
@@ -34,6 +36,58 @@ export default function Agent() {
   const truncatedAddress = address 
     ? `${address.slice(0, 6)}...${address.slice(-4)}` 
     : null;
+
+  const handleScoutAutoPay = useCallback(async () => {
+    setScoutPayState('running');
+    setScoutPayError(null);
+    try {
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+      const scoutToken = import.meta.env.VITE_SCOUT_API_TOKEN || '';
+      const res = await fetch(`${API_BASE}/swap/scout-swap-and-pay`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(scoutToken ? { 'Authorization': `Bearer ${scoutToken}` } : {}),
+        },
+        body: JSON.stringify({
+          tokenIn: '0x0000000000000000000000000000000000000000',
+          tokenOut: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+          amount: '10000000000000000',
+          recipient: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD10',
+          paymentAmountUsdc: '10',
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: 'Scout auto-pay failed' }));
+        throw new Error(body.error || `Failed (${res.status})`);
+      }
+
+      const data = await res.json();
+      recordScoutSwapAndPay({
+        swapTxHash: data.swapTxHash,
+        paymentTxHash: data.paymentTxHash,
+        swapDetails: {
+          tokenIn: '0x0000000000000000000000000000000000000000',
+          tokenOut: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+          tokenInSymbol: 'ETH',
+          tokenOutSymbol: 'USDC',
+          amountIn: '0.01',
+          amountOut: data.outputAmount ? (Number(data.outputAmount) / 1e6).toFixed(2) : '~10',
+          exchangeRate: '',
+          gasCostUSD: data.gasFeeUSD || '0',
+          priceImpact: 0,
+        },
+        vendor: 'Perplexity',
+        paymentAmountUsdc: 10,
+      });
+      setScoutPayState('done');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Scout auto-pay failed';
+      setScoutPayError(msg);
+      setScoutPayState('error');
+    }
+  }, [recordScoutSwapAndPay]);
 
   return (
     <div className="flex flex-col min-h-full pb-8">
@@ -109,6 +163,29 @@ export default function Agent() {
             </div>
           </div>
         )}
+
+        <div className="bg-card rounded-2xl p-5 border border-border/30">
+          <div className="flex items-center gap-2 mb-4">
+            <ArrowLeftRight size={14} className="text-muted-foreground/40" />
+            <span className="text-[12px] font-semibold text-muted-foreground/50 uppercase tracking-wider">Scout Auto-Pay</span>
+          </div>
+          <p className="text-[11px] text-muted-foreground/40 mb-4">
+            Scout can autonomously swap ETH → USDC via Uniswap then pay vendors. This triggers a real onchain swap + USDC transfer on Base Sepolia.
+          </p>
+          <button
+            onClick={handleScoutAutoPay}
+            disabled={scoutPayState === 'running'}
+            className="w-full py-2.5 rounded-xl text-[13px] font-semibold transition-colors bg-primary/10 text-primary hover:bg-primary/20 active:bg-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {scoutPayState === 'running' ? 'Swapping & Paying...' : scoutPayState === 'done' ? 'Done — Check Activity ✓' : 'Trigger Scout Swap → Pay'}
+          </button>
+          {scoutPayError && (
+            <p className="mt-2 text-[10px] text-rose-400/80">{scoutPayError}</p>
+          )}
+          {scoutPayState === 'done' && (
+            <p className="mt-2 text-[10px] text-emerald-400/80">SWAP + PAYMENT recorded in Activity feed with real tx hashes.</p>
+          )}
+        </div>
 
         <div 
           onClick={() => setLocation('/rules')}

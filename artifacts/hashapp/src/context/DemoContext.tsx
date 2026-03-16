@@ -2,6 +2,20 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 
 export type StatusType = 'APPROVED' | 'AUTO_APPROVED' | 'PENDING' | 'BLOCKED' | 'DECLINED';
 
+export type FeedItemType = 'PAYMENT' | 'SWAP';
+
+export interface SwapDetails {
+  tokenIn: string;
+  tokenOut: string;
+  tokenInSymbol: string;
+  tokenOutSymbol: string;
+  amountIn: string;
+  amountOut: string;
+  exchangeRate: string;
+  gasCostUSD: string;
+  priceImpact?: number;
+}
+
 export interface FeedItem {
   id: string;
   dateGroup: 'TODAY' | 'YESTERDAY' | 'MARCH 11';
@@ -21,6 +35,8 @@ export interface FeedItem {
   permissionsContext?: `0x${string}`;
   delegationManager?: `0x${string}`;
   isDelegation?: boolean;
+  type?: FeedItemType;
+  swapDetails?: SwapDetails;
 }
 
 export interface SpendPermission {
@@ -79,6 +95,30 @@ interface DemoState {
     permissionId: string,
     txHash: string,
   ) => void;
+  recordSwap: (params: {
+    txHash: string;
+    swapDetails: SwapDetails;
+    isReal: boolean;
+  }) => void;
+  recordBlockedSwap: (params: {
+    tokenInSymbol: string;
+    tokenOutSymbol: string;
+    amountIn: string;
+    reason: string;
+  }) => void;
+  recordScoutSwapAndPay: (params: {
+    swapTxHash: string;
+    paymentTxHash: string;
+    swapDetails: SwapDetails;
+    vendor: string;
+    paymentAmountUsdc: number;
+  }) => void;
+  checkSwapRules: (params: {
+    tokenIn: string;
+    tokenOut: string;
+    amountUsd: number;
+    slippage: number;
+  }) => { allowed: boolean; reason?: string };
   declinePending: (id: string) => void;
   toggleRule: (id: string) => void;
   resetDemo: () => void;
@@ -186,6 +226,9 @@ const INITIAL_RULES: Rule[] = [
   { id: 'r3', name: 'Daily limit: 200 USDC', description: 'Cap total daily spend at $200 USDC', enabled: true },
   { id: 'r4', name: 'Block spend permissions', description: 'Prevent Scout from creating recurring spend permissions', enabled: true },
   { id: 'r5', name: 'New vendor approval', description: 'Require your approval before paying a new vendor', enabled: true },
+  { id: 'r6', name: 'Max slippage: 1%', description: 'Block swaps with slippage tolerance above 1%', enabled: true },
+  { id: 'r7', name: 'Per-swap cap: 50 USDC', description: 'Block any single swap above $50 USDC equivalent', enabled: true },
+  { id: 'r8', name: 'Approved tokens only', description: 'Only allow swaps between ETH, WETH, and USDC', enabled: true },
 ];
 
 const STORAGE_KEY = 'hashapp_demo_state';
@@ -196,7 +239,7 @@ function loadPersistedState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed.version === 4) return parsed;
+      if (parsed.version === 5) return parsed;
     }
   } catch {}
   return null;
@@ -205,7 +248,7 @@ function loadPersistedState() {
 function persistState(feed: FeedItem[], rules: Rule[], spendPermissions: SpendPermission[], stage: DemoState['stage']) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      version: 4,
+      version: 5,
       feed,
       rules,
       spendPermissions,
@@ -370,6 +413,142 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     setFeed(prev => [spendItem, ...prev]);
   }, [spendPermissions]);
 
+  const APPROVED_TOKEN_ADDRESSES = [
+    '0x0000000000000000000000000000000000000000',
+    '0x4200000000000000000000000000000000000006',
+    '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+  ];
+
+  const checkSwapRules = useCallback((params: {
+    tokenIn: string;
+    tokenOut: string;
+    amountUsd: number;
+    slippage: number;
+  }) => {
+    const slippageRule = rules.find(r => r.id === 'r6');
+    if (slippageRule?.enabled && params.slippage > 1) {
+      return { allowed: false, reason: 'Slippage exceeds maximum of 1%' };
+    }
+
+    const capRule = rules.find(r => r.id === 'r7');
+    if (capRule?.enabled && params.amountUsd > 50) {
+      return { allowed: false, reason: 'Swap exceeds per-swap cap of $50' };
+    }
+
+    const tokenRule = rules.find(r => r.id === 'r8');
+    if (tokenRule?.enabled) {
+      const inApproved = APPROVED_TOKEN_ADDRESSES.some(a => a.toLowerCase() === params.tokenIn.toLowerCase());
+      const outApproved = APPROVED_TOKEN_ADDRESSES.some(a => a.toLowerCase() === params.tokenOut.toLowerCase());
+      if (!inApproved || !outApproved) {
+        return { allowed: false, reason: 'Token not in approved list' };
+      }
+    }
+
+    return { allowed: true };
+  }, [rules]);
+
+  const recordSwap = useCallback((params: {
+    txHash: string;
+    swapDetails: SwapDetails;
+    isReal: boolean;
+  }) => {
+    const swapItem: FeedItem = {
+      id: `swap-${Date.now()}`,
+      dateGroup: 'TODAY',
+      merchant: 'Uniswap',
+      merchantColor: 'bg-pink-500',
+      merchantInitial: 'U',
+      amount: 0,
+      amountStr: `${params.swapDetails.amountIn} ${params.swapDetails.tokenInSymbol}`,
+      intent: `Swapped ${params.swapDetails.amountIn} ${params.swapDetails.tokenInSymbol} → ${params.swapDetails.amountOut} ${params.swapDetails.tokenOutSymbol}`,
+      status: 'APPROVED',
+      statusMessage: 'Swap executed onchain',
+      timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+      category: 'Swap',
+      txHash: params.txHash,
+      isReal: params.isReal,
+      onchainVerified: params.isReal,
+      type: 'SWAP',
+      swapDetails: params.swapDetails,
+    };
+    setFeed(prev => [swapItem, ...prev]);
+  }, []);
+
+  const recordBlockedSwap = useCallback((params: {
+    tokenInSymbol: string;
+    tokenOutSymbol: string;
+    amountIn: string;
+    reason: string;
+  }) => {
+    const blockedItem: FeedItem = {
+      id: `swap-blocked-${Date.now()}`,
+      dateGroup: 'TODAY',
+      merchant: 'Uniswap',
+      merchantColor: 'bg-pink-500',
+      merchantInitial: 'U',
+      amount: 0,
+      amountStr: `${params.amountIn} ${params.tokenInSymbol}`,
+      intent: `Swap blocked: ${params.amountIn} ${params.tokenInSymbol} → ${params.tokenOutSymbol} — ${params.reason}`,
+      status: 'BLOCKED',
+      statusMessage: params.reason,
+      timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+      category: 'Swap',
+      type: 'SWAP',
+    };
+    setFeed(prev => [blockedItem, ...prev]);
+  }, []);
+
+  const recordScoutSwapAndPay = useCallback((params: {
+    swapTxHash: string;
+    paymentTxHash: string;
+    swapDetails: SwapDetails;
+    vendor: string;
+    paymentAmountUsdc: number;
+  }) => {
+    const now = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+    const swapItem: FeedItem = {
+      id: `scout-swap-${Date.now()}`,
+      dateGroup: 'TODAY',
+      merchant: 'Uniswap',
+      merchantColor: 'bg-pink-500',
+      merchantInitial: 'U',
+      amount: 0,
+      amountStr: `${params.swapDetails.amountIn} ${params.swapDetails.tokenInSymbol}`,
+      intent: `Scout swapped ${params.swapDetails.amountIn} ${params.swapDetails.tokenInSymbol} → ${params.swapDetails.amountOut} ${params.swapDetails.tokenOutSymbol}`,
+      status: 'AUTO_APPROVED',
+      statusMessage: 'Scout auto-swap for vendor payment',
+      timestamp: now,
+      category: 'Swap',
+      txHash: params.swapTxHash,
+      isReal: true,
+      onchainVerified: true,
+      type: 'SWAP',
+      swapDetails: params.swapDetails,
+    };
+
+    const paymentItem: FeedItem = {
+      id: `scout-pay-${Date.now()}`,
+      dateGroup: 'TODAY',
+      merchant: params.vendor,
+      merchantColor: 'bg-teal-500',
+      merchantInitial: params.vendor.charAt(0).toUpperCase(),
+      amount: params.paymentAmountUsdc,
+      amountStr: `$${params.paymentAmountUsdc.toFixed(2)}`,
+      intent: `Scout paid ${params.vendor} after swapping ${params.swapDetails.tokenInSymbol} → USDC`,
+      status: 'AUTO_APPROVED',
+      statusMessage: 'Autonomous payment after swap',
+      timestamp: now,
+      category: 'Payment',
+      txHash: params.paymentTxHash,
+      isReal: true,
+      onchainVerified: true,
+      type: 'PAYMENT',
+    };
+
+    setFeed(prev => [paymentItem, swapItem, ...prev]);
+  }, []);
+
   const declinePending = useCallback((id: string) => {
     setFeed(prev => prev.map(item => 
       item.id === id 
@@ -395,7 +574,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <DemoContext.Provider value={{ feed, rules, spendPermissions, stage, agentAvatarUrl, setAgentAvatarUrl, approvePending, recordDelegationSpend, declinePending, toggleRule, resetDemo }}>
+    <DemoContext.Provider value={{ feed, rules, spendPermissions, stage, agentAvatarUrl, setAgentAvatarUrl, approvePending, recordDelegationSpend, recordSwap, recordBlockedSwap, recordScoutSwapAndPay, checkSwapRules, declinePending, toggleRule, resetDemo }}>
       {children}
     </DemoContext.Provider>
   );
