@@ -9,7 +9,7 @@ import { TruthBadge } from '@/components/TruthBadge';
 
 export default function Receipt() {
   const [, params] = useRoute('/receipt/:id');
-  const { feed } = useDemo();
+  const { feed, spendPermissions } = useDemo();
   
   const item = feed.find(f => f.id === params?.id);
 
@@ -81,7 +81,11 @@ export default function Receipt() {
           {isApprovedOrAuto && (
             <div className="mb-8">
               <TruthBadge
-                type={hasRealProof ? 'onchain' : 'demo'}
+                type={
+                  hasRealProof
+                    ? (item.onchainVerified === true ? 'onchain' : 'pending')
+                    : 'demo'
+                }
                 txHash={item.txHash}
               />
             </div>

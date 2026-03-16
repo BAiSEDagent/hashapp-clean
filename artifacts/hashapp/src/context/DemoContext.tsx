@@ -17,6 +17,7 @@ export interface FeedItem {
   category: string;
   txHash?: string;
   isReal?: boolean;
+  onchainVerified?: boolean;
 }
 
 export interface SpendPermission {
@@ -291,6 +292,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
             statusMessage: realTxHash ? 'Approved — spend permission granted onchain' : 'Approved — spend permission granted (demo)',
             txHash: realTxHash,
             isReal: !!realTxHash,
+            onchainVerified,
           } 
         : item
     ));

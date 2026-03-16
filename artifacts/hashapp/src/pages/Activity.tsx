@@ -128,9 +128,14 @@ function FeedCard({
     return <PendingCard item={item} onApprove={onApprove} onDecline={onDecline} />;
   }
 
-  const badgeType = isApprovedOrAuto
-    ? (item.isReal && item.txHash ? 'onchain' as const : 'demo' as const)
-    : null;
+  let badgeType: 'onchain' | 'demo' | 'pending' | null = null;
+  if (isApprovedOrAuto) {
+    if (item.isReal && item.txHash) {
+      badgeType = item.onchainVerified === true ? 'onchain' : 'pending';
+    } else {
+      badgeType = 'demo';
+    }
+  }
 
   return (
     <motion.div
