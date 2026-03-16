@@ -7,12 +7,13 @@ import { waitForTransactionReceipt, readContract } from 'wagmi/actions';
 import { walletConfig } from '@/config/wallet';
 import { useDemo, type FeedItem, type StatusType } from '@/context/DemoContext';
 import { AvatarIcon } from '@/components/ui/AvatarIcon';
+import { AgentAvatar } from '@/components/AgentAvatar';
+import { TruthBadge } from '@/components/TruthBadge';
 import {
   SPEND_PERMISSION_MANAGER_ADDRESS,
   SPEND_PERMISSION_MANAGER_ABI,
   SCOUT_SPENDER_ADDRESS,
   USDC_BASE_SEPOLIA,
-  type SpendPermissionStruct,
 } from '@/config/spendPermission';
 
 const TRUSTED_DESTINATIONS = [
@@ -41,7 +42,7 @@ export default function Activity() {
           <p className="text-[11px] text-muted-foreground/50 mt-0.5 font-mono tracking-wide">scout.base.eth</p>
         </div>
         <div className="relative">
-          <AvatarIcon initial="S" colorClass="bg-zinc-800 border border-zinc-700" />
+          <AgentAvatar size="sm" />
           <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background" />
         </div>
       </header>
@@ -83,9 +84,7 @@ export default function Activity() {
                     key={item.id} 
                     item={item} 
                     isLast={i === items.length - 1}
-                    onApprove={(txHash, permissionStruct, onchainVerified) =>
-                      approvePending(item.id, txHash, permissionStruct, onchainVerified)
-                    }
+                    onApprove={approvePending}
                     onDecline={() => declinePending(item.id)}
                     onClick={() => {
                       if (item.status !== 'PENDING') {
@@ -109,22 +108,13 @@ function FeedCard({
   onApprove, 
   onDecline,
   onClick
-}: {
-  item: FeedItem;
+}: { 
+  item: FeedItem; 
   isLast: boolean;
   onApprove: (
-    txHash?: string,
-    permissionStruct?: {
-      account: `0x${string}`;
-      spender: `0x${string}`;
-      token: `0x${string}`;
-      allowance: string;
-      period: number;
-      start: number;
-      end: number;
-      salt: string;
-      extraData: `0x${string}`;
-    },
+    id: string,
+    realTxHash?: string,
+    permissionStruct?: import('@/context/DemoContext').SpendPermission['permissionStruct'],
     onchainVerified?: boolean,
   ) => void;
   onDecline: () => void;
@@ -132,9 +122,19 @@ function FeedCard({
 }) {
   const isPending = item.status === 'PENDING';
   const isBlocked = item.status === 'BLOCKED' || item.status === 'DECLINED';
+  const isApprovedOrAuto = item.status === 'APPROVED' || item.status === 'AUTO_APPROVED';
 
   if (isPending) {
     return <PendingCard item={item} onApprove={onApprove} onDecline={onDecline} />;
+  }
+
+  let badgeType: 'onchain' | 'demo' | 'pending' | null = null;
+  if (isApprovedOrAuto) {
+    if (item.isReal && item.txHash) {
+      badgeType = item.onchainVerified === true ? 'onchain' : 'pending';
+    } else {
+      badgeType = 'demo';
+    }
   }
 
   return (
@@ -161,8 +161,13 @@ function FeedCard({
           </span>
         </div>
         <div className="flex justify-between items-center gap-3">
-          <p className={`text-[11px] truncate leading-relaxed ${isBlocked ? 'text-muted-foreground/35' : 'text-muted-foreground/50'}`}>{item.intent}</p>
-          <StatusDot status={item.status} />
+          <div className="flex items-center gap-2 min-w-0">
+            <p className={`text-[11px] truncate leading-relaxed ${isBlocked ? 'text-muted-foreground/35' : 'text-muted-foreground/50'}`}>{item.intent}</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {badgeType && <TruthBadge type={badgeType} txHash={item.txHash} />}
+            <StatusDot status={item.status} />
+          </div>
         </div>
       </div>
     </motion.div>
@@ -176,18 +181,9 @@ function PendingCard({
 }: {
   item: FeedItem;
   onApprove: (
-    txHash?: string,
-    permissionStruct?: {
-      account: `0x${string}`;
-      spender: `0x${string}`;
-      token: `0x${string}`;
-      allowance: string;
-      period: number;
-      start: number;
-      end: number;
-      salt: string;
-      extraData: `0x${string}`;
-    },
+    id: string,
+    realTxHash?: string,
+    permissionStruct?: import('@/context/DemoContext').SpendPermission['permissionStruct'],
     onchainVerified?: boolean,
   ) => void;
   onDecline: () => void;
@@ -210,7 +206,7 @@ function PendingCard({
       const now = Math.floor(Date.now() / 1000);
       const allowanceRaw = BigInt(Math.round(item.amount * 1_000_000));
 
-      const permission: SpendPermissionStruct = {
+      const permissionArgs = {
         account: address,
         spender: SCOUT_SPENDER_ADDRESS,
         token: USDC_BASE_SEPOLIA,
@@ -219,14 +215,14 @@ function PendingCard({
         start: now,
         end: now + 3600,
         salt: BigInt(Date.now()),
-        extraData: '0x',
+        extraData: '0x' as `0x${string}`,
       };
 
       const txHash = await writeContractAsync({
         address: SPEND_PERMISSION_MANAGER_ADDRESS,
         abi: SPEND_PERMISSION_MANAGER_ABI,
         functionName: 'approve',
-        args: [permission],
+        args: [permissionArgs],
       });
 
       const receipt = await waitForTransactionReceipt(walletConfig, { hash: txHash });
@@ -236,29 +232,31 @@ function PendingCard({
         return;
       }
 
-      const onchainVerified = await readContract(walletConfig, {
-        address: SPEND_PERMISSION_MANAGER_ADDRESS,
-        abi: SPEND_PERMISSION_MANAGER_ABI,
-        functionName: 'isApproved',
-        args: [permission],
-      });
+      let onchainVerified = false;
+      try {
+        const approved = await readContract(walletConfig, {
+          address: SPEND_PERMISSION_MANAGER_ADDRESS,
+          abi: SPEND_PERMISSION_MANAGER_ABI,
+          functionName: 'isApproved',
+          args: [permissionArgs],
+        });
+        onchainVerified = !!approved;
+      } catch {}
+
+      const storedStruct = {
+        account: permissionArgs.account,
+        spender: permissionArgs.spender,
+        token: permissionArgs.token,
+        allowance: permissionArgs.allowance.toString(),
+        period: permissionArgs.period,
+        start: permissionArgs.start,
+        end: permissionArgs.end,
+        salt: permissionArgs.salt.toString(),
+        extraData: permissionArgs.extraData,
+      };
 
       setConfirmedHash(txHash);
-      onApprove(
-        txHash,
-        {
-          account: permission.account,
-          spender: permission.spender,
-          token: permission.token,
-          allowance: permission.allowance.toString(),
-          period: permission.period,
-          start: permission.start,
-          end: permission.end,
-          salt: permission.salt.toString(),
-          extraData: permission.extraData,
-        },
-        onchainVerified,
-      );
+      onApprove(item.id, txHash, storedStruct, onchainVerified);
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Transaction failed';
       if (message.includes('User rejected') || message.includes('user rejected')) {
@@ -289,6 +287,7 @@ function PendingCard({
           <div className="px-2 py-0.5 rounded-md bg-amber-500/12 border border-amber-500/15">
             <span className="text-[9px] font-semibold text-amber-400/90 uppercase tracking-[0.1em]">Spend Permission Request</span>
           </div>
+          <TruthBadge type="pending" />
         </div>
 
         <div className="flex items-start gap-4">

@@ -17,6 +17,7 @@ export interface FeedItem {
   category: string;
   txHash?: string;
   isReal?: boolean;
+  onchainVerified?: boolean;
 }
 
 export interface SpendPermission {
@@ -56,6 +57,8 @@ interface DemoState {
   rules: Rule[];
   spendPermissions: SpendPermission[];
   stage: 'INITIAL' | 'PENDING_ADDED' | 'APPROVED' | 'RULE_DISABLED' | 'BLOCKED_ADDED';
+  agentAvatarUrl: string | null;
+  setAgentAvatarUrl: (url: string | null) => void;
   approvePending: (
     id: string,
     realTxHash?: string,
@@ -172,13 +175,14 @@ const INITIAL_RULES: Rule[] = [
 ];
 
 const STORAGE_KEY = 'hashapp_demo_state';
+const AVATAR_STORAGE_KEY = 'hashapp_agent_avatar';
 
 function loadPersistedState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed.version === 2) return parsed;
+      if (parsed.version === 3) return parsed;
     }
   } catch {}
   return null;
@@ -187,7 +191,7 @@ function loadPersistedState() {
 function persistState(feed: FeedItem[], rules: Rule[], spendPermissions: SpendPermission[], stage: DemoState['stage']) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      version: 2,
+      version: 3,
       feed,
       rules,
       spendPermissions,
@@ -204,6 +208,25 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   const [rules, setRules] = useState<Rule[]>(persisted?.rules ?? INITIAL_RULES);
   const [spendPermissions, setSpendPermissions] = useState<SpendPermission[]>(persisted?.spendPermissions ?? INITIAL_SPEND_PERMISSIONS);
   const [stage, setStage] = useState<DemoState['stage']>(persisted?.stage ?? 'INITIAL');
+
+  const [agentAvatarUrl, setAgentAvatarUrlState] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(AVATAR_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  });
+
+  const setAgentAvatarUrl = useCallback((url: string | null) => {
+    setAgentAvatarUrlState(url);
+    try {
+      if (url) {
+        localStorage.setItem(AVATAR_STORAGE_KEY, url);
+      } else {
+        localStorage.removeItem(AVATAR_STORAGE_KEY);
+      }
+    } catch {}
+  }, []);
 
   useEffect(() => {
     persistState(feed, rules, spendPermissions, stage);
@@ -266,13 +289,10 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
         ? { 
             ...item, 
             status: 'APPROVED' as StatusType, 
-            statusMessage: realTxHash
-              ? onchainVerified
-                ? 'Approved — verified onchain'
-                : 'Approved — spend permission granted onchain'
-              : 'Approved — spend permission granted (demo)',
+            statusMessage: realTxHash ? 'Approved — spend permission granted onchain' : 'Approved — spend permission granted (demo)',
             txHash: realTxHash,
             isReal: !!realTxHash,
+            onchainVerified,
           } 
         : item
     ));
@@ -318,7 +338,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <DemoContext.Provider value={{ feed, rules, spendPermissions, stage, approvePending, declinePending, toggleRule, resetDemo }}>
+    <DemoContext.Provider value={{ feed, rules, spendPermissions, stage, agentAvatarUrl, setAgentAvatarUrl, approvePending, declinePending, toggleRule, resetDemo }}>
       {children}
     </DemoContext.Provider>
   );
