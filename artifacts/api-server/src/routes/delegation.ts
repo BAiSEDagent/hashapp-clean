@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { createHmac, timingSafeEqual } from 'crypto';
-import { createWalletClient, http, encodeFunctionData, erc20Abi, parseUnits, isAddress } from 'viem';
+import { createWalletClient, http, encodeFunctionData, erc20Abi, parseUnits, isAddress, verifyMessage } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { baseSepolia } from 'viem/chains';
 import { erc7710WalletActions } from '@metamask/smart-accounts-kit/actions';
@@ -28,13 +28,21 @@ const rateLimitMap = new Map<string, { count: number; windowStart: number }>();
 const IDEMPOTENCY_TTL_MS = 300_000;
 const idempotencyMap = new Map<string, { txHash: string; ts: number }>();
 
+const CHALLENGE_TTL_SECONDS = 120;
+const CHALLENGE_PREFIX = 'hashapp-delegation-register';
+const usedChallenges = new Map<string, number>();
+
 function pruneExpiredEntries() {
   const now = Date.now();
+  const nowSec = Math.floor(now / 1000);
   for (const [key, entry] of idempotencyMap) {
     if (now - entry.ts > IDEMPOTENCY_TTL_MS) idempotencyMap.delete(key);
   }
   for (const [key, entry] of rateLimitMap) {
     if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS) rateLimitMap.delete(key);
+  }
+  for (const [msg, ts] of usedChallenges) {
+    if (nowSec - ts > CHALLENGE_TTL_SECONDS * 2) usedChallenges.delete(msg);
   }
 }
 
@@ -90,10 +98,15 @@ function validateSpendToken(token: string, permissionsContext: string): { valid:
 
 delegationRouter.post('/delegation/register', async (req, res) => {
   try {
-    const { permissionsContext, delegatorAddress } = req.body;
+    const { permissionsContext, delegatorAddress, signature, message } = req.body;
 
     if (!permissionsContext || !delegatorAddress) {
       res.status(400).json({ error: 'Missing required fields: permissionsContext, delegatorAddress' });
+      return;
+    }
+
+    if (!signature || !message) {
+      res.status(401).json({ error: 'Missing wallet signature' });
       return;
     }
 
@@ -104,6 +117,51 @@ delegationRouter.post('/delegation/register', async (req, res) => {
 
     if (!isAddress(delegatorAddress)) {
       res.status(400).json({ error: 'Invalid delegatorAddress' });
+      return;
+    }
+
+    const expectedPattern = new RegExp(
+      `^${CHALLENGE_PREFIX}:0x[0-9a-f]+:0x[0-9a-fA-F]{40}:(\\d+)$`
+    );
+    const match = message.match(expectedPattern);
+    if (!match) {
+      res.status(401).json({ error: 'Invalid challenge format' });
+      return;
+    }
+
+    const challengeTimestamp = parseInt(match[1], 10);
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (challengeTimestamp > nowSec || nowSec - challengeTimestamp > CHALLENGE_TTL_SECONDS) {
+      res.status(401).json({ error: 'Challenge expired' });
+      return;
+    }
+
+    const expectedMessage = `${CHALLENGE_PREFIX}:${permissionsContext.toLowerCase()}:${delegatorAddress}:${challengeTimestamp}`;
+    if (message !== expectedMessage) {
+      res.status(401).json({ error: 'Challenge does not match request' });
+      return;
+    }
+
+    if (usedChallenges.has(message)) {
+      res.status(401).json({ error: 'Challenge already used' });
+      return;
+    }
+
+    usedChallenges.set(message, nowSec);
+
+    let recoveredValid = false;
+    try {
+      recoveredValid = await verifyMessage({
+        address: delegatorAddress as `0x${string}`,
+        message,
+        signature: signature as `0x${string}`,
+      });
+    } catch {
+      recoveredValid = false;
+    }
+
+    if (!recoveredValid) {
+      res.status(401).json({ error: 'Signature verification failed' });
       return;
     }
 

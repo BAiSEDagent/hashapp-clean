@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Loader2, ExternalLink, ArrowDownUp } from 'lucide-react';
 import { useLocation } from 'wouter';
-import { useAccount, useWriteContract, useConnect } from 'wagmi';
+import { useAccount, useWriteContract, useConnect, useWalletClient } from 'wagmi';
 import { waitForTransactionReceipt, readContract } from 'wagmi/actions';
 import { walletConfig } from '@/config/wallet';
 import { USE_METAMASK_DELEGATION } from '@/config/delegation';
@@ -224,6 +224,7 @@ function PendingCard({
 }) {
   const { address, isConnected } = useAccount();
   const { connectors, connect } = useConnect();
+  const { data: walletClient } = useWalletClient();
   const [isApproving, setIsApproving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmedHash, setConfirmedHash] = useState<string | null>(null);
@@ -231,7 +232,7 @@ function PendingCard({
   const { writeContractAsync } = useWriteContract();
 
   const handleGrantDelegation = async () => {
-    if (!isConnected || !address) return;
+    if (!isConnected || !address || !walletClient) return;
 
     setIsApproving(true);
     setError(null);
@@ -239,7 +240,11 @@ function PendingCard({
     try {
       const result = await requestDelegatedPermission(item.amount);
 
-      const authResult = await registerDelegation(result.permissionsContext, address);
+      const signMessage = async (args: { message: string }) => {
+        return walletClient.signMessage({ message: args.message, account: address });
+      };
+
+      const authResult = await registerDelegation(result.permissionsContext, address, signMessage);
 
       onApprove(item.id, undefined, undefined, true, {
         permissionsContext: result.permissionsContext,

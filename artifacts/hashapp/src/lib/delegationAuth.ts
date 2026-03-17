@@ -3,10 +3,20 @@ export interface RegisterDelegationResult {
   expiresAt: number;
 }
 
+export type SignMessageFn = (args: { message: string }) => Promise<`0x${string}`>;
+
+const CHALLENGE_PREFIX = 'hashapp-delegation-register';
+
 export async function registerDelegation(
   permissionsContext: `0x${string}`,
   delegatorAddress: `0x${string}`,
+  signMessage: SignMessageFn,
 ): Promise<RegisterDelegationResult> {
+  const timestamp = Math.floor(Date.now() / 1000);
+  const message = `${CHALLENGE_PREFIX}:${permissionsContext.toLowerCase()}:${delegatorAddress}:${timestamp}`;
+
+  const signature = await signMessage({ message });
+
   const apiBase = import.meta.env.VITE_API_BASE_URL || '/api';
   const response = await fetch(`${apiBase}/delegation/register`, {
     method: 'POST',
@@ -14,6 +24,8 @@ export async function registerDelegation(
     body: JSON.stringify({
       permissionsContext,
       delegatorAddress,
+      signature,
+      message,
     }),
   });
 
