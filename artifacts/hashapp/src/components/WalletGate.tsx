@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAccount, useConnect } from 'wagmi';
-import { Wallet, Shield, Eye, ArrowRight, Loader2, ChevronDown } from 'lucide-react';
+import { Wallet, Shield, Eye, ArrowRight, Loader2, ChevronDown, AlertTriangle } from 'lucide-react';
+import { USE_METAMASK_DELEGATION } from '@/config/delegation';
 
 export function WalletGate({ children }: { children: React.ReactNode }) {
   const { isConnected } = useAccount();
@@ -16,12 +17,27 @@ function LandingPage() {
   const { connectors, connect, isPending } = useConnect();
   const [connectingId, setConnectingId] = useState<string | null>(null);
   const [showOtherWallets, setShowOtherWallets] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
 
   const handleConnect = (connector: (typeof connectors)[number]) => {
+    setConnectError(null);
     setConnectingId(connector.uid);
-    connect({ connector }, {
-      onSettled: () => setConnectingId(null),
-    });
+    connect(
+      { connector },
+      {
+        onError: (error) => {
+          const message = error?.message?.toLowerCase?.() ?? '';
+          if (message.includes('not found') || message.includes('not installed')) {
+            setConnectError('MetaMask not detected. Open this in MetaMask browser or install the extension.');
+          } else if (message.includes('rejected')) {
+            setConnectError('Connection request rejected.');
+          } else {
+            setConnectError(error?.message || 'Wallet connection failed.');
+          }
+        },
+        onSettled: () => setConnectingId(null),
+      },
+    );
   };
 
   const primaryConnector = connectors[0];
@@ -77,7 +93,7 @@ function LandingPage() {
                   ) : (
                     <>
                       <Wallet size={16} />
-                      Connect Wallet
+                      {USE_METAMASK_DELEGATION ? 'Connect MetaMask' : 'Connect Wallet'}
                     </>
                   )}
                 </button>
@@ -113,6 +129,13 @@ function LandingPage() {
                   </button>
                 );
               })}
+
+              {connectError && (
+                <div className="flex items-start gap-2 rounded-xl border border-rose-500/20 bg-rose-500/8 px-3 py-2 text-left">
+                  <AlertTriangle size={14} className="text-rose-400/80 shrink-0 mt-0.5" />
+                  <p className="text-[12px] text-rose-300/90 leading-relaxed">{connectError}</p>
+                </div>
+              )}
             </div>
 
             <p className="text-[11px] text-muted-foreground/35 mt-4 leading-relaxed max-w-[260px]">
