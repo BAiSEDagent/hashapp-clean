@@ -29,7 +29,7 @@ function generateDemoResponse(prompt: string): { summary: string; model: string 
 router.post('/venice/analyze', async (req, res) => {
   const hasVeniceKey = !!process.env.VENICE_API_KEY;
 
-  const expectedToken = process.env.SCOUT_API_TOKEN;
+  const expectedToken = process.env.AGENT_API_TOKEN || process.env.SCOUT_API_TOKEN;
   const authHeader = req.headers.authorization;
   if (expectedToken) {
     const providedToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;

@@ -311,3 +311,43 @@ Active
 
 ### Notes
 Strong caveat remains: payee/destination restriction is still partially app-layer rather than fully contract-enforced.
+
+---
+
+## 2026-03-18 — Canonical repo wins over raw Replit branch state
+
+### Decision
+Use the canonical `hashapp` repo as the integration surface and selectively port real product changes from `frontend/truth-pass` instead of merging the raw Replit branch wholesale.
+
+### Why
+The Replit branch mixed valuable app/server work with screenshots, pasted transcripts, agent scratch files, and accidental deletions of canonical docs and partner-track truth.
+
+### Alternatives considered
+- merge `frontend/truth-pass` directly into `main`
+- keep building in the old Replit branch and treat it as source of truth
+
+### Status
+Active
+
+### Notes
+This decision preserves repo truth while still rescuing real product work.
+
+---
+
+## 2026-03-18 — Disconnect must clear agent identity and restore landing page
+
+### Decision
+Treat wallet disconnect as a full return-to-entry action for the current session: clear connected agent state, close the account sheet, and route back to the landing page.
+
+### Why
+Leaving stale agent/address surfaces visible after disconnect makes the app feel fake and breaks trust.
+
+### Alternatives considered
+- disconnect wallet only and leave agent state intact
+- rely on wagmi disconnect alone and hope the UI catches up
+
+### Status
+Active
+
+### Notes
+This is a product-truth rule, not just a UI polish preference.

@@ -231,7 +231,7 @@ function FeedCard({
 
 async function callVeniceAnalyze(item: FeedItem): Promise<VeniceFields> {
   const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
-  const scoutToken = import.meta.env.VITE_SCOUT_API_TOKEN || '';
+  const agentToken = import.meta.env.VITE_AGENT_API_TOKEN || import.meta.env.VITE_SCOUT_API_TOKEN || '';
   const prompt = `Privately review a spend request for ${item.merchant} costing ${item.amountStr} in the category "${item.category}". Evaluate whether this purchase is reasonable, assess vendor pricing, and identify any risk factors.`;
 
   try {
@@ -239,7 +239,7 @@ async function callVeniceAnalyze(item: FeedItem): Promise<VeniceFields> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(scoutToken ? { 'Authorization': `Bearer ${scoutToken}` } : {}),
+        ...(agentToken ? { 'Authorization': `Bearer ${agentToken}` } : {}),
       },
       body: JSON.stringify({ prompt }),
     });

@@ -123,3 +123,38 @@ Verified
 
 ### Notes
 This proof materially upgrades Hashapp from a credible product prototype to a product with a real technical spine.
+
+---
+
+## 2026-03-18 — Canonical truth-pass rescue audit
+
+### Source
+- manual audit of `origin/frontend/truth-pass`
+- selective port into canonical integration branch
+
+### Findings
+- Replit branch contained real product work mixed with repo noise and accidental canonical-doc deletions
+- disconnect flow left stale agent identity/address visible after wallet disconnect
+- landing-page return after disconnect regressed
+- `Scout` token/env naming leaked into new Venice/agent flows
+- delegation DB hardening landed without migrations in the branch diff
+
+### Severity
+- High: stale address / disconnect trust regression
+- High: branch could not be merged wholesale without deleting canonical docs
+- High: delegation schema migration gap
+- Medium: lingering `Scout` naming in agent flows
+
+### Action taken
+- selectively ported real app/server changes into clean integration branch instead of merging raw Replit branch
+- fixed disconnect flow to clear connected agent state and route back to landing page
+- added `AGENT_API_TOKEN` alias/fallback support in new agent-facing flows while preserving legacy compatibility
+- preserved canonical docs / proof / partner-track files by excluding destructive branch noise
+
+### Status
+Partially fixed
+
+### Notes
+Current clean integration branch: `audit/integrate-truth-pass-clean`.
+Local receipts so far:
+- `6acb4077` — initial clean port of truth-pass into canonical line

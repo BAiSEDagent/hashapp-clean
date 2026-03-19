@@ -1,12 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAccount, useDisconnect } from 'wagmi';
+import { useLocation } from 'wouter';
 import { Copy, Check, LogOut, X, Wallet, AlertTriangle } from 'lucide-react';
+import { useDemo } from '@/context/DemoContext';
 
 export function AccountSheet({ onClose }: { onClose: () => void }) {
-  const { address, chain } = useAccount();
+  const { address, chain, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
+  const { disconnectAgent } = useDemo();
+  const [, setLocation] = useLocation();
   const [copied, setCopied] = useState(false);
   const [confirmingDisconnect, setConfirmingDisconnect] = useState(false);
+
+  useEffect(() => {
+    if (!isConnected || !address) {
+      onClose();
+      setLocation('/');
+    }
+  }, [address, isConnected, onClose, setLocation]);
 
   if (!address) return null;
 
@@ -19,8 +30,10 @@ export function AccountSheet({ onClose }: { onClose: () => void }) {
   };
 
   const handleDisconnect = () => {
+    disconnectAgent();
     disconnect();
     onClose();
+    setLocation('/');
   };
 
   return (

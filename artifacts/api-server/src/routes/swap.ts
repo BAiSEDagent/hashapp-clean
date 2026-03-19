@@ -28,8 +28,8 @@ function validateSwapRules(tokenIn: string, tokenOut: string, slippage: number, 
   return null;
 }
 
-function requireScoutAuth(authHeader: string | undefined): boolean {
-  const token = process.env.SCOUT_API_TOKEN;
+function requireAgentAuth(authHeader: string | undefined): boolean {
+  const token = process.env.AGENT_API_TOKEN || process.env.SCOUT_API_TOKEN;
   if (!token) return false;
   if (!authHeader) return false;
   const provided = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
@@ -105,8 +105,8 @@ swapRouter.post('/swap/execute', async (req, res) => {
     }
 
     if (mode === 'scout') {
-      if (!requireScoutAuth(req.headers.authorization)) {
-        res.status(401).json({ error: 'Unauthorized: valid SCOUT_API_TOKEN required for scout mode' });
+      if (!requireAgentAuth(req.headers.authorization)) {
+        res.status(401).json({ error: 'Unauthorized: valid AGENT_API_TOKEN required for agent mode' });
         return;
       }
       const txHash = await executeSwapWithScoutWallet(
@@ -130,8 +130,8 @@ swapRouter.post('/swap/execute', async (req, res) => {
 
 swapRouter.post('/swap/scout-swap-and-pay', async (req, res) => {
   try {
-    if (!requireScoutAuth(req.headers.authorization)) {
-      res.status(401).json({ error: 'Unauthorized: valid SCOUT_API_TOKEN required' });
+    if (!requireAgentAuth(req.headers.authorization)) {
+      res.status(401).json({ error: 'Unauthorized: valid AGENT_API_TOKEN required' });
       return;
     }
 

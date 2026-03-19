@@ -29,7 +29,7 @@ export async function analyzeWithVenice(prompt: string): Promise<{
     messages: [
       {
         role: 'system',
-        content: 'You are a private financial reasoning assistant for an AI spending agent called Scout. Analyze the given context and return a concise reasoning summary (2-3 sentences). Focus on risk assessment, value comparison, or vendor evaluation. Be direct and factual.',
+        content: 'You are a private financial reasoning assistant for an AI spending agent. Analyze the given context and return a concise reasoning summary (2-3 sentences). Focus on risk assessment, value comparison, or vendor evaluation. Be direct and factual.',
       },
       {
         role: 'user',

@@ -256,12 +256,12 @@ function AgentActiveState({
     setAutoPayError(null);
     try {
       const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
-      const scoutToken = import.meta.env.VITE_SCOUT_API_TOKEN || '';
+      const agentToken = import.meta.env.VITE_AGENT_API_TOKEN || import.meta.env.VITE_SCOUT_API_TOKEN || '';
       const res = await fetch(`${API_BASE}/swap/scout-swap-and-pay`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(scoutToken ? { 'Authorization': `Bearer ${scoutToken}` } : {}),
+          ...(agentToken ? { 'Authorization': `Bearer ${agentToken}` } : {}),
         },
         body: JSON.stringify({
           tokenIn: '0x0000000000000000000000000000000000000000',
