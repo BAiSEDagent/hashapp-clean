@@ -299,8 +299,29 @@ function PendingCard({
     }
   };
 
+  const delegationUnavailableReason = !isConnected
+    ? 'Wallet not connected'
+    : !window.ethereum
+      ? 'MetaMask not detected. Please install MetaMask Flask 13.5.0+.'
+      : !walletClient
+        ? 'Waiting for wallet...'
+        : null;
+
   const handleGrantDelegation = async () => {
-    if (!isConnected || !address || !walletClient) return;
+    if (!isConnected || !address) {
+      setError('Wallet not connected');
+      return;
+    }
+
+    if (!window.ethereum) {
+      setError('MetaMask not detected. Please install MetaMask Flask 13.5.0+.');
+      return;
+    }
+
+    if (!walletClient) {
+      setError('Waiting for wallet...');
+      return;
+    }
 
     setIsApproving(true);
     setError(null);
@@ -484,7 +505,7 @@ function PendingCard({
             {isConnected ? (
               <button 
                 data-testid={`button-approve-${item.id}`}
-                disabled={isBusy}
+                disabled={isBusy || (!!USE_METAMASK_DELEGATION && !!delegationUnavailableReason)}
                 onClick={(e) => { e.stopPropagation(); handleGrantPermission(); }}
                 className="flex-1 py-2.5 rounded-xl text-[13px] font-semibold text-primary-foreground bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25 active:scale-[0.98] transition-all disabled:opacity-70 disabled:pointer-events-none flex items-center justify-center gap-2"
               >
@@ -493,6 +514,8 @@ function PendingCard({
                     <Loader2 size={14} className="animate-spin" />
                     {isAnalyzing ? 'Analyzing…' : USE_METAMASK_DELEGATION ? 'Requesting…' : 'Approving…'}
                   </>
+                ) : delegationUnavailableReason ? (
+                  'Grant Delegation'
                 ) : (
                   buttonLabel
                 )}
@@ -527,6 +550,12 @@ function PendingCard({
               </button>
             )}
           </div>
+
+          {delegationUnavailableReason && USE_METAMASK_DELEGATION && !error && (
+            <p className="text-[11px] text-amber-400/80 text-center">
+              {delegationUnavailableReason}
+            </p>
+          )}
 
           {confirmedHash && (
             <motion.a

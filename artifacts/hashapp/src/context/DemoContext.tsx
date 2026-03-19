@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useAccount } from 'wagmi';
 
 export type StatusType = 'APPROVED' | 'AUTO_APPROVED' | 'PENDING' | 'BLOCKED' | 'DECLINED';
 
@@ -101,6 +102,7 @@ interface DemoState {
   connectAgent: (agent: ConnectedAgent) => void;
   editAgent: (agent: ConnectedAgent) => void;
   disconnectAgent: () => void;
+  forgetAgent: () => void;
   approvePending: (
     id: string,
     realTxHash?: string,
@@ -269,13 +271,24 @@ const INITIAL_RULES: Rule[] = [
   { id: 'r8', name: 'Approved tokens only', description: 'Only allow swaps between ETH, WETH, and USDC', enabled: true },
 ];
 
-const STORAGE_KEY = 'hashapp_demo_state';
-const AVATAR_STORAGE_KEY = 'hashapp_agent_avatar';
-const AGENT_STORAGE_KEY = 'hashapp_connected_agent';
+const STORAGE_KEY_PREFIX = 'hashapp_demo_state';
+const AVATAR_STORAGE_KEY_PREFIX = 'hashapp_agent_avatar';
+const AGENT_STORAGE_KEY_PREFIX = 'hashapp_connected_agent';
 
-function loadPersistedState() {
+function normalizeAddress(address?: string | null) {
+  return address?.toLowerCase() ?? null;
+}
+
+function getWalletScopedKey(prefix: string, address?: string | null) {
+  const normalized = normalizeAddress(address);
+  return normalized ? `${prefix}_${normalized}` : null;
+}
+
+function loadPersistedState(address?: string | null) {
+  const key = getWalletScopedKey(STORAGE_KEY_PREFIX, address);
+  if (!key) return null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed.version === 10) return parsed;
@@ -284,17 +297,31 @@ function loadPersistedState() {
   return null;
 }
 
-function loadPersistedAgent(): ConnectedAgent | null {
+function loadPersistedAgent(address?: string | null): ConnectedAgent | null {
+  const key = getWalletScopedKey(AGENT_STORAGE_KEY_PREFIX, address);
+  if (!key) return null;
   try {
-    const raw = localStorage.getItem(AGENT_STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     if (raw) return JSON.parse(raw);
   } catch {}
   return null;
 }
 
-function persistState(feed: FeedItem[], rules: Rule[], spendPermissions: SpendPermission[], stage: DemoState['stage'], privateReasoningEnabled: boolean) {
+function loadPersistedAvatar(address?: string | null): string | null {
+  const key = getWalletScopedKey(AVATAR_STORAGE_KEY_PREFIX, address);
+  if (!key) return null;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function persistState(address: string | null | undefined, feed: FeedItem[], rules: Rule[], spendPermissions: SpendPermission[], stage: DemoState['stage'], privateReasoningEnabled: boolean) {
+  const key = getWalletScopedKey(STORAGE_KEY_PREFIX, address);
+  if (!key) return;
+  try {
+    localStorage.setItem(key, JSON.stringify({
       version: 10,
       feed,
       rules,
@@ -308,55 +335,89 @@ function persistState(feed: FeedItem[], rules: Rule[], spendPermissions: SpendPe
 const DemoContext = createContext<DemoState | undefined>(undefined);
 
 export function DemoProvider({ children }: { children: React.ReactNode }) {
-  const persisted = loadPersistedState();
+  const { address, isConnected } = useAccount();
+  const walletAddress = normalizeAddress(address);
+  const persisted = loadPersistedState(walletAddress);
   const [feed, setFeed] = useState<FeedItem[]>(persisted?.feed ?? INITIAL_FEED);
   const [rules, setRules] = useState<Rule[]>(persisted?.rules ?? INITIAL_RULES);
   const [spendPermissions, setSpendPermissions] = useState<SpendPermission[]>(persisted?.spendPermissions ?? INITIAL_SPEND_PERMISSIONS);
   const [stage, setStage] = useState<DemoState['stage']>(persisted?.stage ?? 'INITIAL');
   const [privateReasoningEnabled, setPrivateReasoningEnabled] = useState<boolean>(persisted?.privateReasoningEnabled ?? true);
-  const [connectedAgent, setConnectedAgent] = useState<ConnectedAgent | null>(loadPersistedAgent);
+  const [connectedAgent, setConnectedAgent] = useState<ConnectedAgent | null>(loadPersistedAgent(walletAddress));
 
   const connectAgent = useCallback((agent: ConnectedAgent) => {
     setConnectedAgent(agent);
-    try { localStorage.setItem(AGENT_STORAGE_KEY, JSON.stringify(agent)); } catch {}
-  }, []);
+    const key = getWalletScopedKey(AGENT_STORAGE_KEY_PREFIX, walletAddress);
+    if (!key) return;
+    try { localStorage.setItem(key, JSON.stringify(agent)); } catch {}
+  }, [walletAddress]);
 
   const editAgent = useCallback((agent: ConnectedAgent) => {
     setConnectedAgent(agent);
-    try { localStorage.setItem(AGENT_STORAGE_KEY, JSON.stringify(agent)); } catch {}
-  }, []);
+    const key = getWalletScopedKey(AGENT_STORAGE_KEY_PREFIX, walletAddress);
+    if (!key) return;
+    try { localStorage.setItem(key, JSON.stringify(agent)); } catch {}
+  }, [walletAddress]);
 
-  const [agentAvatarUrl, setAgentAvatarUrlState] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem(AVATAR_STORAGE_KEY);
-    } catch {
-      return null;
-    }
-  });
+  const [agentAvatarUrl, setAgentAvatarUrlState] = useState<string | null>(() => loadPersistedAvatar(walletAddress));
 
   const setAgentAvatarUrl = useCallback((url: string | null) => {
     setAgentAvatarUrlState(url);
+    const key = getWalletScopedKey(AVATAR_STORAGE_KEY_PREFIX, walletAddress);
+    if (!key) return;
     try {
       if (url) {
-        localStorage.setItem(AVATAR_STORAGE_KEY, url);
+        localStorage.setItem(key, url);
       } else {
-        localStorage.removeItem(AVATAR_STORAGE_KEY);
+        localStorage.removeItem(key);
       }
     } catch {}
-  }, []);
+  }, [walletAddress]);
 
   const disconnectAgent = useCallback(() => {
     setConnectedAgent(null);
-    setAgentAvatarUrl(null);
-    try { localStorage.removeItem(AGENT_STORAGE_KEY); } catch {}
-  }, [setAgentAvatarUrl]);
+    setAgentAvatarUrlState(null);
+  }, []);
+
+  const forgetAgent = useCallback(() => {
+    const agentKey = getWalletScopedKey(AGENT_STORAGE_KEY_PREFIX, walletAddress);
+    const avatarKey = getWalletScopedKey(AVATAR_STORAGE_KEY_PREFIX, walletAddress);
+    setConnectedAgent(null);
+    setAgentAvatarUrlState(null);
+    try {
+      if (agentKey) localStorage.removeItem(agentKey);
+      if (avatarKey) localStorage.removeItem(avatarKey);
+    } catch {}
+  }, [walletAddress]);
 
   useEffect(() => {
-    persistState(feed, rules, spendPermissions, stage, privateReasoningEnabled);
-  }, [feed, rules, spendPermissions, stage, privateReasoningEnabled]);
+    persistState(walletAddress, feed, rules, spendPermissions, stage, privateReasoningEnabled);
+  }, [walletAddress, feed, rules, spendPermissions, stage, privateReasoningEnabled]);
 
   useEffect(() => {
-    if (stage !== 'INITIAL') return;
+    if (!walletAddress || !isConnected) {
+      setFeed(INITIAL_FEED);
+      setRules(INITIAL_RULES);
+      setSpendPermissions(INITIAL_SPEND_PERMISSIONS);
+      setStage('INITIAL');
+      setPrivateReasoningEnabled(true);
+      setConnectedAgent(null);
+      setAgentAvatarUrlState(null);
+      return;
+    }
+
+    const nextPersisted = loadPersistedState(walletAddress);
+    setFeed(nextPersisted?.feed ?? INITIAL_FEED);
+    setRules(nextPersisted?.rules ?? INITIAL_RULES);
+    setSpendPermissions(nextPersisted?.spendPermissions ?? INITIAL_SPEND_PERMISSIONS);
+    setStage(nextPersisted?.stage ?? 'INITIAL');
+    setPrivateReasoningEnabled(nextPersisted?.privateReasoningEnabled ?? true);
+    setConnectedAgent(loadPersistedAgent(walletAddress));
+    setAgentAvatarUrlState(loadPersistedAvatar(walletAddress));
+  }, [walletAddress, isConnected]);
+
+  useEffect(() => {
+    if (!isConnected || stage !== 'INITIAL') return;
     const timer = setTimeout(() => {
       const pendingTx: FeedItem = {
         id: 'tx-1-pending',
@@ -379,7 +440,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   }, [stage]);
 
   useEffect(() => {
-    if (stage !== 'RULE_DISABLED') return;
+    if (!isConnected || stage !== 'RULE_DISABLED') return;
     const timer = setTimeout(() => {
       const blockedTx: FeedItem = {
         id: 'tx-7-blocked',
@@ -654,17 +715,18 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   }, [stage]);
 
   const resetDemo = useCallback(() => {
-    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    const stateKey = getWalletScopedKey(STORAGE_KEY_PREFIX, walletAddress);
+    try { if (stateKey) localStorage.removeItem(stateKey); } catch {}
     setFeed(INITIAL_FEED);
     setRules(INITIAL_RULES);
     setSpendPermissions(INITIAL_SPEND_PERMISSIONS);
     setStage('INITIAL');
     setPrivateReasoningEnabled(true);
-    disconnectAgent();
-  }, [disconnectAgent]);
+    forgetAgent();
+  }, [walletAddress, forgetAgent]);
 
   return (
-    <DemoContext.Provider value={{ feed, rules, spendPermissions, stage, privateReasoningEnabled, setPrivateReasoningEnabled, agentAvatarUrl, setAgentAvatarUrl, connectedAgent, connectAgent, editAgent, disconnectAgent, approvePending, recordDelegationSpend, recordSwap, recordBlockedSwap, recordScoutSwapAndPay, checkSwapRules, declinePending, toggleRule, resetDemo }}>
+    <DemoContext.Provider value={{ feed, rules, spendPermissions, stage, privateReasoningEnabled, setPrivateReasoningEnabled, agentAvatarUrl, setAgentAvatarUrl, connectedAgent, connectAgent, editAgent, disconnectAgent, forgetAgent, approvePending, recordDelegationSpend, recordSwap, recordBlockedSwap, recordScoutSwapAndPay, checkSwapRules, declinePending, toggleRule, resetDemo }}>
       {children}
     </DemoContext.Provider>
   );

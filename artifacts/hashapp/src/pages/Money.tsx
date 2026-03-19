@@ -16,6 +16,7 @@ import {
   SPEND_PERMISSION_MANAGER_ABI,
 } from '@/config/spendPermission';
 import { formatUnits } from 'viem';
+import { useResolvedWalletLabel } from '@/lib/addressDisplay';
 
 const ERC20_BALANCE_ABI = [
   {
@@ -57,9 +58,7 @@ export default function Money() {
 
   const totalPermissionAllowance = activePermissions.reduce((sum, p) => sum + p.amount, 0);
 
-  const truncatedAddress = address
-    ? `${address.slice(0, 6)}...${address.slice(-4)}`
-    : null;
+  const { displayLabel: walletLabel } = useResolvedWalletLabel(address);
 
   return (
     <div className="flex flex-col min-h-full pb-8">
@@ -88,7 +87,7 @@ export default function Money() {
               {usdcBalance !== null ? `$${usdcBalance}` : '—'}
             </h2>
             <p className="text-[12px] text-muted-foreground/40">
-              USDC · {chain?.name || 'Base Sepolia'} · <button onClick={() => setShowAccountSheet(true)} className="text-muted-foreground/50 hover:text-muted-foreground/70 transition-colors underline decoration-muted-foreground/20 underline-offset-2 font-mono">{truncatedAddress}</button>
+              USDC · {chain?.name || 'Base Sepolia'} · <button onClick={() => setShowAccountSheet(true)} className="text-muted-foreground/50 hover:text-muted-foreground/70 transition-colors underline decoration-muted-foreground/20 underline-offset-2 font-mono">{walletLabel ?? 'No wallet'}</button>
             </p>
             {showAccountSheet && <AccountSheet onClose={() => setShowAccountSheet(false)} />}
 

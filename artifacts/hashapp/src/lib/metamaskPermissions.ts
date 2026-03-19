@@ -21,6 +21,28 @@ export interface GrantedDelegation {
   expiry: number;
 }
 
+function normalizeDelegationError(err: unknown): Error {
+  const message = err instanceof Error ? err.message : String(err);
+  const code = typeof err === 'object' && err !== null && 'code' in err ? String((err as { code?: unknown }).code) : '';
+  const lower = message.toLowerCase();
+
+  if (lower.includes('user rejected')) {
+    return new Error('Request rejected');
+  }
+
+  if (
+    code === '4200' ||
+    lower.includes('requestexecutionpermissions') ||
+    lower.includes('delegation') && lower.includes('not supported') ||
+    lower.includes('invalid parameters were provided to the rpc method') ||
+    lower.includes('unsupported method')
+  ) {
+    return new Error("Your wallet doesn't support delegation permissions. MetaMask Flask 13.5.0+ required.");
+  }
+
+  return err instanceof Error ? err : new Error(message);
+}
+
 export async function requestDelegatedPermission(
   amountUsdc: number,
 ): Promise<GrantedDelegation> {
@@ -92,6 +114,6 @@ export async function requestDelegatedPermission(
     console.error('[Delegation] Error details:', error?.details);
     console.error('[Delegation] Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
     console.error('[Delegation] Raw error object:', err);
-    throw err;
+    throw normalizeDelegationError(err);
   }
 }

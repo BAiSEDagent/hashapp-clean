@@ -14,7 +14,7 @@ import {
 } from '@/config/spendPermission';
 
 export default function Agent() {
-  const { connectedAgent, disconnectAgent } = useDemo();
+  const { connectedAgent, forgetAgent } = useDemo();
   const [showConnectSheet, setShowConnectSheet] = useState(false);
   const [editMode, setEditMode] = useState(false);
 
@@ -36,7 +36,7 @@ export default function Agent() {
     <>
       <AgentActiveState
         onEdit={() => { setEditMode(true); setShowConnectSheet(true); }}
-        onDisconnect={disconnectAgent}
+        onDisconnect={forgetAgent}
       />
       {showConnectSheet && (
         <ConnectAgentSheet

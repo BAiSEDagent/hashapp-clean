@@ -158,3 +158,5 @@ Partially fixed
 Current clean integration branch: `audit/integrate-truth-pass-clean`.
 Local receipts so far:
 - `6acb4077` — initial clean port of truth-pass into canonical line
+- `7240e92b` — restore disconnect truth, landing return, and agent naming cleanup
+- pending current pass — bug #26 identity restore + delegation-error truth
