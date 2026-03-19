@@ -1,16 +1,72 @@
 import { useState } from 'react';
-import { useAccount, useConnect } from 'wagmi';
+import { useAccount, useConnect, useSwitchChain } from 'wagmi';
+import { baseSepolia } from 'wagmi/chains';
 import { Wallet, Shield, Eye, ArrowRight, Loader2, ChevronDown, AlertTriangle } from 'lucide-react';
 import { USE_METAMASK_DELEGATION } from '@/config/delegation';
 
 export function WalletGate({ children }: { children: React.ReactNode }) {
-  const { isConnected } = useAccount();
+  const { isConnected, chainId } = useAccount();
 
-  if (isConnected) {
-    return <>{children}</>;
+  if (!isConnected) {
+    return <LandingPage />;
   }
 
-  return <LandingPage />;
+  if (chainId !== baseSepolia.id) {
+    return <WrongNetworkPage />;
+  }
+
+  return <>{children}</>;
+}
+
+function WrongNetworkPage() {
+  const { switchChain, isPending } = useSwitchChain();
+  const [switchError, setSwitchError] = useState<string | null>(null);
+
+  const handleSwitch = () => {
+    setSwitchError(null);
+    switchChain(
+      { chainId: baseSepolia.id },
+      {
+        onError: (error) => {
+          const message = error?.message || 'Network switch failed.';
+          setSwitchError(message);
+        },
+      },
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-base-200 w-full flex justify-center text-base-content font-sans">
+      <div className="w-full max-w-[430px] bg-background min-h-screen relative flex flex-col shadow-2xl border-x border-white/[0.04]">
+        <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/15 flex items-center justify-center mb-8">
+            <AlertTriangle size={28} className="text-amber-400" />
+          </div>
+          <h1 className="text-[28px] font-bold tracking-tight mb-3">Wrong network</h1>
+          <p className="text-[14px] text-muted-foreground/70 leading-relaxed mb-8 max-w-[300px]">
+            Hashapp delegation and approvals are wired for Base Sepolia right now. Switch networks before continuing.
+          </p>
+          <button
+            onClick={handleSwitch}
+            disabled={isPending}
+            className="w-full py-3.5 rounded-2xl text-[15px] font-semibold transition-all bg-primary text-primary-foreground hover:bg-primary/90 active:scale-[0.98] shadow-lg shadow-primary/20 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {isPending ? (
+              <><Loader2 size={16} className="animate-spin" /> Switching...</>
+            ) : (
+              'Switch to Base Sepolia'
+            )}
+          </button>
+          {switchError && (
+            <div className="mt-3 flex items-start gap-2 rounded-xl border border-rose-500/20 bg-rose-500/8 px-3 py-2 text-left w-full">
+              <AlertTriangle size={14} className="text-rose-400/80 shrink-0 mt-0.5" />
+              <p className="text-[12px] text-rose-300/90 leading-relaxed">{switchError}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function LandingPage() {
@@ -45,7 +101,7 @@ function LandingPage() {
   const hasPrimary = !!primaryConnector;
 
   return (
-    <div className="min-h-screen bg-[#000000] w-full flex justify-center text-foreground font-sans">
+    <div className="min-h-screen bg-base-200 w-full flex justify-center text-base-content font-sans">
       <div className="w-full max-w-[430px] bg-background min-h-screen relative flex flex-col shadow-2xl border-x border-white/[0.04]">
         <div className="flex-1 flex flex-col items-center justify-center px-8">
           <div className="flex flex-col items-center text-center w-full">

@@ -5,7 +5,7 @@ import { useLocation } from 'wouter';
 import { useAccount, useWriteContract, useConnect, useWalletClient } from 'wagmi';
 import { waitForTransactionReceipt, readContract } from 'wagmi/actions';
 import { walletConfig } from '@/config/wallet';
-import { USE_METAMASK_DELEGATION } from '@/config/delegation';
+import { USE_METAMASK_DELEGATION, DELEGATION_CHAIN_ID } from '@/config/delegation';
 import { requestDelegatedPermission } from '@/lib/metamaskPermissions';
 import { registerDelegation } from '@/lib/delegationAuth';
 import { useDemo, type FeedItem, type StatusType } from '@/context/DemoContext';
@@ -279,11 +279,12 @@ function PendingCard({
   onDecline: () => void;
 }) {
   const { connectedAgent, privateReasoningEnabled } = useDemo();
-  const { address, isConnected } = useAccount();
-  const { connectors, connect } = useConnect();
+  const { address, isConnected, chainId } = useAccount();
   const { data: walletClient } = useWalletClient();
   const [isApproving, setIsApproving] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [approvalPhase, setApprovalPhase] = useState<'idle' | 'analyzing' | 'requesting' | 'confirming' | 'finalizing'>('idle');
+  const [approvalCooldown, setApprovalCooldown] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmedHash, setConfirmedHash] = useState<string | null>(null);
 
@@ -291,6 +292,7 @@ function PendingCard({
 
   const runVeniceIfEnabled = async (): Promise<VeniceFields | undefined> => {
     if (!privateReasoningEnabled) return undefined;
+    setApprovalPhase('analyzing');
     setIsAnalyzing(true);
     try {
       return await callVeniceAnalyze(item);
@@ -299,13 +301,19 @@ function PendingCard({
     }
   };
 
+  const wrongNetworkReason = isConnected && chainId !== DELEGATION_CHAIN_ID
+    ? 'Wrong network. Switch to Base Sepolia to continue.'
+    : null;
+
   const delegationUnavailableReason = !isConnected
     ? 'Wallet not connected'
-    : !window.ethereum
-      ? 'MetaMask not detected. Please install MetaMask Flask 13.5.0+.'
-      : !walletClient
-        ? 'Waiting for wallet...'
-        : null;
+    : wrongNetworkReason
+      ? wrongNetworkReason
+      : !window.ethereum
+        ? 'MetaMask not detected. Please install MetaMask Flask 13.5.0+.'
+        : !walletClient
+          ? 'Waiting for wallet...'
+          : null;
 
   const handleGrantDelegation = async () => {
     if (!isConnected || !address) {
@@ -325,16 +333,19 @@ function PendingCard({
 
     setIsApproving(true);
     setError(null);
+    setApprovalPhase(privateReasoningEnabled ? 'analyzing' : 'requesting');
 
     try {
       const veniceResult = await runVeniceIfEnabled();
 
+      setApprovalPhase('requesting');
       const result = await requestDelegatedPermission(item.amount);
 
       const signMessage = async (args: { message: string }) => {
         return walletClient.signMessage({ message: args.message, account: address });
       };
 
+      setApprovalPhase('finalizing');
       const authResult = await registerDelegation(result.permissionsContext, address, signMessage);
 
       onApprove(item.id, undefined, undefined, undefined, {
@@ -352,14 +363,24 @@ function PendingCard({
       }
     } finally {
       setIsApproving(false);
+      setApprovalPhase('idle');
     }
   };
 
   const handleGrantPermissionCoinbase = async () => {
-    if (!isConnected || !address) return;
+    if (!isConnected || !address) {
+      setError('Wallet not connected');
+      return;
+    }
+
+    if (wrongNetworkReason) {
+      setError(wrongNetworkReason);
+      return;
+    }
 
     setIsApproving(true);
     setError(null);
+    setApprovalPhase(privateReasoningEnabled ? 'analyzing' : 'requesting');
 
     try {
       const veniceResult = await runVeniceIfEnabled();
@@ -379,6 +400,7 @@ function PendingCard({
         extraData: '0x' as `0x${string}`,
       };
 
+      setApprovalPhase('requesting');
       const txHash = await writeContractAsync({
         address: SPEND_PERMISSION_MANAGER_ADDRESS,
         abi: SPEND_PERMISSION_MANAGER_ABI,
@@ -386,6 +408,7 @@ function PendingCard({
         args: [permissionArgs],
       });
 
+      setApprovalPhase('confirming');
       const receipt = await waitForTransactionReceipt(walletConfig, { hash: txHash });
 
       if (receipt.status === 'reverted') {
@@ -393,6 +416,7 @@ function PendingCard({
         return;
       }
 
+      setApprovalPhase('finalizing');
       let onchainVerified = false;
       try {
         const approved = await readContract(walletConfig, {
@@ -418,6 +442,8 @@ function PendingCard({
 
       setConfirmedHash(txHash);
       onApprove(item.id, txHash, storedStruct, onchainVerified, undefined, veniceResult);
+      setApprovalCooldown(true);
+      window.setTimeout(() => setApprovalCooldown(false), 4000);
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Transaction failed';
       if (message.includes('User rejected') || message.includes('user rejected')) {
@@ -427,6 +453,7 @@ function PendingCard({
       }
     } finally {
       setIsApproving(false);
+      setApprovalPhase('idle');
     }
   };
 
@@ -434,9 +461,20 @@ function PendingCard({
     ? handleGrantDelegation
     : handleGrantPermissionCoinbase;
 
-  const isBusy = isApproving || isAnalyzing;
+  const isBusy = isApproving || isAnalyzing || approvalCooldown;
 
   const buttonLabel = USE_METAMASK_DELEGATION ? 'Grant Delegation' : 'Grant Permission';
+  const activeButtonLabel = approvalPhase === 'analyzing'
+    ? 'Analyzing…'
+    : approvalPhase === 'requesting'
+      ? USE_METAMASK_DELEGATION ? 'Requesting in MetaMask…' : 'Requesting approval…'
+      : approvalPhase === 'confirming'
+        ? 'Confirming onchain…'
+        : approvalPhase === 'finalizing'
+          ? USE_METAMASK_DELEGATION ? 'Finalizing delegation…' : 'Finalizing permission…'
+          : approvalCooldown
+            ? USE_METAMASK_DELEGATION ? 'Delegation granted' : 'Permission granted'
+            : buttonLabel;
 
   return (
     <motion.div
@@ -511,8 +549,8 @@ function PendingCard({
               >
                 {isBusy ? (
                   <>
-                    <Loader2 size={14} className="animate-spin" />
-                    {isAnalyzing ? 'Analyzing…' : USE_METAMASK_DELEGATION ? 'Requesting…' : 'Approving…'}
+                    <Loader2 size={14} className={approvalCooldown ? '' : 'animate-spin'} />
+                    {activeButtonLabel}
                   </>
                 ) : delegationUnavailableReason ? (
                   'Grant Delegation'
