@@ -1,0 +1,455 @@
+This behavior is mostly correct, but the lifecycle is still incomplete.
+
+What is correct
+Yes:
+the DataStream Pro delegation control should stay there after a successful allowed spend
+because the spend did not consume the delegation itself
+it used the delegated authority once, but the authority is still active until expiry or revocation
+
+So:
+successful spend appears in Activity feed
+the delegation control remains active
+you can still trigger more spends within scope
+
+That part is right.
+
+What is missing
+What’s not right yet is the lifecycle around expiry and management.
+Right now the UI is telling you:
+delegation is active
+expiry is in ~6d 23h
+
+But it does not yet answer the next obvious questions:
+what happens when it expires?
+does the control disappear?
+does it change to expired state?
+can I renew?
+can I remove/revoke?
+
+Those are real missing states.
+
+Correct product behavior
+While active
+Keep:
+delegation control visible
+expiry visible
+demo actions visible
+
+When expired
+It should not just disappear silently.
+
+It should become something like:
+Delegation expired
+actions disabled
+primary CTA:
+Renew delegation
+
+If revoked/removed
+It should show:
+Delegation inactive
+no active spend actions
+CTA:
+Grant delegation again
+
+Optional but desirable now
+Add:
+Remove delegation or Revoke delegation
+even if revocation is demo-only / local-state for now, the UI lifecycle should exist
+
+My read
+You found the next real gap:
+not another broken flow,
+but an unfinished delegation lifecycle.
+
+So the answer is:
+
+Should it stay after one spend? → yes
+Should it silently vanish at expiry? → no
+Should there be renew/remove states? → yes, absolutely
+That is the next polish/hardening cut if we want this to feel complete instead of barely functional.
+DECENTRADEAD [WEN],  — 11:54 AM
+ok so brainstorm a plan to fix.
+BAiSED APP
+APP
+ — 11:54 AM
+Here’s the plan.
+
+Objective
+Make delegation feel like a real authority lifecycle, not a one-off button with a countdown.
+
+---
+
+Define the delegation states clearly
+Right now we mostly have:
+pending
+active
+
+We need the full state machine:
+
+A. No delegation
+show Grant Delegation
+B. Pending grant
+show request/approval state
+block duplicate actions
+
+C. Active delegation
+show:
+active badge
+expiry
+allowed/blocked demo actions
+CTA set:
+Renew
+Remove / Revoke
+
+D. Expiring soon
+same as active, but visually warn
+primary CTA:
+Renew delegation
+E. Expired
+no active spend actions
+clear expired state
+primary CTA:
+Renew delegation
+
+F. Removed / revoked
+authority inactive
+primary CTA:
+Grant delegation
+
+---
+
+Separate authority state from activity history
+This is the key architectural fix.
+
+Current problem
+The app still partially mixes:
+authority state
+feed history
+action visibility
+
+Correct model
+Delegation Control section should derive from:
+active permission object
+expiry timestamp
+revoked/expired flags
+current wallet / agent state
+
+Activity feed should only show:
+grant happened
+spend happened
+blocked attempt happened
+renewal happened
+revoke happened
+
+Authority state should not depend on feed rows.
+
+---
+
+Add derived lifecycle helpers
+In DemoContext or a shared helper, create derived delegation status:
+
+For the canonical vendor/demo rail:
+none
+pending
+active
+expiringSoon
+expired
+revoked
+Inputs
+Use:
+spendPermissions
+delegationExpiry
+current time
+optional local revoked flag
+
+---
+
+Fix the Activity control surface
+Delegation Control should become a real authority card
+Top of card:
+vendor
+status badge
+expiry / expired text
+
+Middle:
+concise explanation of current authority
+
+Bottom:
+CTAs by state
+
+Active
+Trigger allowed spend
+Trigger blocked spend
+secondary:
+Renew delegation
+Remove delegation
+
+Expired
+Renew delegation
+
+Revoked
+Grant delegation
+Pending
+approval UI only
+
+---
+
+Decide what “Remove delegation” means for demo
+There are two options.
+
+Option A — demo-safe local revoke
+Fastest.
+mark delegation as revoked in app state
+disable demo actions
+write a “revoked” event to feed/history
+
+This is enough for judges if framed honestly:
+app lifecycle is demonstrated
+revocation UX exists
+no fake onchain revocation claim unless real
+
+Option B — true onchain revoke
+Better, but riskier / slower.
+Only do this if the actual MetaMask delegation rail supports a clean revoke path in your current integration and you can prove it safely.
+
+Recommendation
+Use Option A now unless true revoke is already basically wired.
+
+---
+
+Add renewal behavior
+For demo purposes, renewal can just mean:
+request delegation again
+replace old active permission
+create renewal event in feed/history
+refresh expiry visibly
+This gives a clean lifecycle story:
+grant
+use
+block
+renew
+remove
+
+That’s strong.
+
+---
+
+Fix Money tab role
+Money should not be the main action surface.
+
+Money should show
+current delegated authority
+vendor
+status
+expiry
+maybe Manage in Activity
+
+Money should not carry
+primary spend trigger buttons
+duplicate lifecycle controls
+
+Keep Activity as the control plane.
+
+---
+
+Receipt/history additions
+We should add explicit feed/receipt event types for:
+delegation granted
+delegated spend allowed
+delegated spend blocked
+delegation renewed
+delegation removed / revoked
+delegation expired
+
+This will make the proof story cleaner and less ambiguous.
+
+---
+
+Minimal implementation order
+If we want speed and sanity:
+
+Phase 1
+add derived delegation lifecycle state
+make Activity control card render from that state
+
+Phase 2
+add Renew delegation
+add Remove delegation (demo-local revoke)
+
+Phase 3
+add feed/history events for renew/revoke
+make Money summary-only
+
+Phase 4
+add expiring soon / expired states
+
+---
+
+Acceptance criteria
+We’re done when:
+
+after successful grant, control stays active
+allowed spend does not remove authority
+blocked spend does not remove authority
+expired delegation does not silently vanish
+expired delegation disables spend actions
+renew CTA appears when appropriate
+remove/revoke CTA exists and changes authority state
+Money reflects authority but does not compete with Activity
+Activity remains the single canonical control surface
+
+---
+
+My recommendation
+Do this in one focused pass:
+
+Activity lifecycle state
+Renew + Remove
+Money becomes summary-only
+History events for lifecycle changes
+That will make the delegation model feel intentional instead of improvised.
+
+If you want, I can execute that exact plan next.
+DECENTRADEAD [WEN],  — 12:13 PM
+use skills and execute
+BAiSED APP
+APP
+ — 12:14 PM
+I’m executing the delegation lifecycle pass now: derive real authority state, add renew/remove behavior, make Money summary-only, and then I’ll run the post-change audit before I hand it back.
+Yep.
+This confirms exactly what I said earlier.
+
+What’s wrong
+Money still has:
+Run $5 delegated spend
+
+while Activity now has:
+the stable Demo Actions strip
+
+And Receipt also still has its own delegated spend trigger path.
+
+So we currently have three different spend trigger surfaces:
+Money
+Activity
+Receipt
+That is why it still feels amateur.
+Too many entry points for the same demo action.
+
+Correct product shape
+For the hackathon build:
+
+Activity = only canonical control surface
+Money = summary / status only
+Receipt = proof only, not trigger
+Agent = identity / authority summary
+
+My recommendation
+Next surgical cleanup pass should do exactly this:
+
+Remove/demote from Money
+remove Run $5 delegated spend
+replace with something like:
+Manage in Activity
+
+Remove/demote from Receipt
+remove direct delegated spend trigger from Receipt
+keep receipt as evidence only
+
+Keep only in Activity
+Trigger allowed spend
+Trigger blocked spend
+
+That gives us one clean control plane.
+
+Short answer
+What you’re seeing is a real inconsistency.
+Not a backend failure.
+Not a state bug.
+A control-surface sprawl bug.
+And yes, we should fix it before pretending this is polished.
+DECENTRADEAD [WEN],  — 12:16 PM
+use skills and execute. audit. then fix if anything is broken
+BAiSED APP
+APP
+ — 12:20 PM
+I’m collapsing the control surface to one canonical place now: Activity only. Then I’ll audit the branch for any remaining delegated-spend triggers outside Activity before I hand it back.
+Need change SpendPermissionRow props.
+Replace component.
+Remove canSpend handleSpend/error block replace button.
+Need remove handleDelegatedSpend/canSpend/spendTxHash/spendError.
+Replace with manage in activity notice maybe if delegation authority.
+I’ve removed the duplicate spend triggers from Money and Receipt. I’m doing the audit sweep now to make sure Activity is the only remaining delegated-spend control surface before I commit.
+The control-surface cleanup and audit both passed locally. Remote moved again, so I’m rebasing this exact fix on top before I return the final receipt.
+Done.
+
+I executed the cleanup, audited it, and then checked for leftover delegated-spend trigger surfaces before returning.
+
+New receipt
+23fb2bb2 — rebased push containing:
+fix: keep delegated spend controls in activity only
+
+What I changed
+Money
+Removed the delegated spend trigger from Money.
+Replaced it with:
+Manage in Activity
+
+Money is now summary-only again:
+active authority
+status
+expiry
+allowance summary
+
+Receipt
+Removed the direct delegated spend trigger from Receipt.
+Replaced it with:
+Open Activity
+
+Receipt is now proof-only again:
+status
+authority
+tx details
+provenance
+evidence
+
+Activity
+Still remains the single canonical control plane for:
+Trigger allowed spend
+Trigger blocked spend
+
+---
+
+Post-change audit
+Control-surface audit
+I explicitly checked the repo for delegated-spend trigger surfaces.
+
+Result
+The only remaining live spend triggers are now in:
+artifacts/hashapp/src/pages/Activity.tsx
+
+What remains elsewhere:
+Manage in Activity in Money
+Open Activity in Receipt
+low-level utility executeDelegationSpend in the lib, which is fine
+
+Quality gate
+pnpm run typecheck ✅
+PORT=3000 BASE_PATH=/ pnpm --filter @workspace/hashapp run build ✅
+
+---
+
+Why this matters
+This removes the amateur-feeling control sprawl.
+
+Now the product shape is cleaner:
+Activity = control + history
+Money = summary
+Receipt = proof
+Agent = identity / authority
+That is the right demo structure.
+
+Sync target
+Replit should sync to:
+23fb2bb2
+
+After sync, the delegated-spend CTA should only exist in Activity.
