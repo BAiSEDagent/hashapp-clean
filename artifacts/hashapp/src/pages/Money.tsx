@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Wallet, Shield, ArrowRight, RefreshCw, Loader2, Zap } from 'lucide-react';
+import { Wallet, Shield, ArrowRight, RefreshCw } from 'lucide-react';
 import { useAccount, useReadContract } from 'wagmi';
 import { useDemo, type SpendPermission } from '@/context/DemoContext';
 import { AvatarIcon } from '@/components/ui/AvatarIcon';
@@ -9,7 +9,6 @@ import { WalletAddressChip } from '@/components/WalletAddressChip';
 import { AccountSheet } from '@/components/AccountSheet';
 import { useLocation } from 'wouter';
 import { USE_METAMASK_DELEGATION } from '@/config/delegation';
-import { executeDelegationSpend } from '@/lib/delegationSpend';
 import {
   USDC_BASE_SEPOLIA,
   SPEND_PERMISSION_MANAGER_ADDRESS,
@@ -29,7 +28,7 @@ const ERC20_BALANCE_ABI = [
 ] as const;
 
 export default function Money() {
-  const { feed, rules, spendPermissions, resetDemo, recordDelegationSpend, connectedAgent } = useDemo();
+  const { feed, rules, spendPermissions, resetDemo, connectedAgent } = useDemo();
   const agentName = connectedAgent?.name ?? 'your agent';
   const { address, isConnected, chain } = useAccount();
   const [, setLocation] = useLocation();
@@ -134,7 +133,7 @@ export default function Money() {
               </h3>
             </div>
             {activePermissions.map(perm => (
-              <SpendPermissionRow key={perm.id} permission={perm} onSpend={recordDelegationSpend} />
+              <SpendPermissionRow key={perm.id} permission={perm} onManage={() => setLocation('/activity')} />
             ))}
           </div>
         )}
@@ -171,10 +170,8 @@ export default function Money() {
   );
 }
 
-function SpendPermissionRow({ permission, onSpend }: { permission: SpendPermission; onSpend: (permissionId: string, txHash: string) => void }) {
+function SpendPermissionRow({ permission, onManage }: { permission: SpendPermission; onManage: () => void }) {
   const cadenceLabel = { daily: '/day', weekly: '/wk', monthly: '/mo' };
-  const [isSpending, setIsSpending] = useState(false);
-  const [spendError, setSpendError] = useState<string | null>(null);
 
   const permStruct = permission.permissionStruct;
   const isDelegation = USE_METAMASK_DELEGATION && permission.isDelegation;
@@ -208,28 +205,7 @@ function SpendPermissionRow({ permission, onSpend }: { permission: SpendPermissi
     badgeType = 'demo';
   }
 
-  const canSpend = isDelegation && permission.permissionsContext && permission.delegationManager && permission.spendToken;
-
-  const handleSpend = async () => {
-    if (!canSpend || !permission.permissionsContext || !permission.delegationManager || !permission.spendToken) return;
-    setIsSpending(true);
-    setSpendError(null);
-    try {
-      const result = await executeDelegationSpend({
-        permissionsContext: permission.permissionsContext,
-        delegationManager: permission.delegationManager,
-        amountUsdc: '5',
-        recipient: '0x000000000000000000000000000000000000dEaD' as `0x${string}`,
-        spendToken: permission.spendToken,
-      });
-      onSpend(permission.id, result.txHash);
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Spend failed';
-      setSpendError(msg.length > 60 ? msg.slice(0, 60) + '…' : msg);
-    } finally {
-      setIsSpending(false);
-    }
-  };
+  const canManageInActivity = isDelegation && permission.permissionsContext && permission.delegationManager && permission.spendToken;
 
   return (
     <div className="flex flex-col gap-2 p-3 rounded-xl bg-card border border-border/30 hover:border-border/50 transition-colors">
@@ -249,21 +225,13 @@ function SpendPermissionRow({ permission, onSpend }: { permission: SpendPermissi
           <span className="text-[10px] text-muted-foreground/40">{cadenceLabel[permission.cadence]}</span>
         </div>
       </div>
-      {canSpend && (
+      {canManageInActivity && (
         <button
-          onClick={handleSpend}
-          disabled={isSpending}
-          className="flex items-center justify-center gap-1.5 w-full py-2 rounded-lg text-[11px] font-semibold bg-orange-500/10 text-orange-400/90 hover:bg-orange-500/15 active:scale-[0.98] transition-all disabled:opacity-50"
+          onClick={onManage}
+          className="flex items-center justify-center gap-1.5 w-full py-2 rounded-lg text-[11px] font-semibold bg-orange-500/10 text-orange-400/90 hover:bg-orange-500/15 active:scale-[0.98] transition-all"
         >
-          {isSpending ? (
-            <><Loader2 size={11} className="animate-spin" /> Spending…</>
-          ) : (
-            <><Zap size={11} /> Run $5 delegated spend</>
-          )}
+          <ArrowRight size={11} /> Manage in Activity
         </button>
-      )}
-      {spendError && (
-        <p className="text-[10px] text-rose-400 px-1">{spendError}</p>
       )}
     </div>
   );

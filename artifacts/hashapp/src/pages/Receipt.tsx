@@ -1,11 +1,9 @@
-import { useState } from 'react';
 import { useRoute, Link } from 'wouter';
-import { X, ExternalLink, Loader2, Zap, Eye } from 'lucide-react';
+import { X, ExternalLink, Eye } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTransactionReceipt, useBlock, useReadContract } from 'wagmi';
 import { useDemo } from '@/context/DemoContext';
-import { USE_METAMASK_DELEGATION, DELEGATION_RECIPIENT_ADDRESS } from '@/config/delegation';
-import { executeDelegationSpend } from '@/lib/delegationSpend';
+import { USE_METAMASK_DELEGATION } from '@/config/delegation';
 import {
   SPEND_PERMISSION_MANAGER_ADDRESS,
   SPEND_PERMISSION_MANAGER_ABI,
@@ -16,10 +14,7 @@ import { TruthBadge } from '@/components/TruthBadge';
 
 export default function Receipt() {
   const [, params] = useRoute('/receipt/:id');
-  const { feed, spendPermissions, recordDelegationSpend, connectedAgent } = useDemo();
-  const [isSpending, setIsSpending] = useState(false);
-  const [spendError, setSpendError] = useState<string | null>(null);
-  const [spendTxHash, setSpendTxHash] = useState<string | null>(null);
+  const { feed, spendPermissions, connectedAgent } = useDemo();
   
   const item = feed.find(f => f.id === params?.id);
 
@@ -46,46 +41,6 @@ export default function Receipt() {
   const permStruct = linkedPerm?.permissionStruct;
   const isDelegation = USE_METAMASK_DELEGATION && (item?.isDelegation || linkedPerm?.isDelegation);
 
-  const delegationContext = item?.permissionsContext || linkedPerm?.permissionsContext;
-  const delegationMgr = item?.delegationManager || linkedPerm?.delegationManager;
-  const delegationSpendToken = item?.spendToken || linkedPerm?.spendToken;
-  const canSpend = isDelegation && !!delegationContext && !!delegationMgr && !!delegationSpendToken && !spendTxHash;
-
-  const handleDelegatedSpend = async () => {
-    if (!delegationContext || !delegationMgr || !delegationSpendToken) return;
-    setIsSpending(true);
-    setSpendError(null);
-    try {
-      if (import.meta.env.DEV) {
-        console.log('[Spend] Triggering delegated spend...', {
-          permissionsContext: delegationContext.slice(0, 20) + '...',
-          delegationManager: delegationMgr,
-          recipient: DELEGATION_RECIPIENT_ADDRESS,
-          amountUsdc: '5',
-        });
-      }
-      const result = await executeDelegationSpend({
-        permissionsContext: delegationContext,
-        delegationManager: delegationMgr,
-        amountUsdc: '5',
-        recipient: DELEGATION_RECIPIENT_ADDRESS,
-        spendToken: delegationSpendToken,
-      });
-      if (import.meta.env.DEV) {
-        console.log('[Spend] Success! txHash:', result.txHash);
-      }
-      setSpendTxHash(result.txHash);
-      if (linkedPerm) {
-        recordDelegationSpend(linkedPerm.id, result.txHash);
-      }
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Delegated spend failed';
-      console.error('[Spend] Error:', message);
-      setSpendError(message.length > 120 ? message.slice(0, 120) + '…' : message);
-    } finally {
-      setIsSpending(false);
-    }
-  };
 
   const { data: isApprovedLive } = useReadContract({
     address: SPEND_PERMISSION_MANAGER_ADDRESS,
@@ -278,60 +233,18 @@ export default function Receipt() {
             </div>
           )}
 
-          {canSpend && (
-            <div className="w-full mt-6 space-y-3">
-              <button
-                onClick={handleDelegatedSpend}
-                disabled={isSpending}
-                className="w-full py-3 rounded-xl text-[13px] font-semibold text-primary-foreground bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25 active:scale-[0.98] transition-all disabled:opacity-70 disabled:pointer-events-none flex items-center justify-center gap-2"
-              >
-                {isSpending ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    Executing spend…
-                  </>
-                ) : (
-                  <>
-                    <Zap size={14} />
-                    Test Delegated Spend ($5 USDC)
-                  </>
-                )}
-              </button>
-              <p className="text-[10px] text-muted-foreground/40 text-center">
-                Redeems $5 USDC from the granted delegation via agent session key
-              </p>
-            </div>
-          )}
-
-          {spendError && (
-            <motion.div
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="w-full mt-4 px-4 py-3 rounded-xl bg-rose-500/10 border border-rose-500/20"
-            >
-              <p className="text-[11px] text-rose-400 break-all">{spendError}</p>
-            </motion.div>
-          )}
-
-          {spendTxHash && (
-            <motion.div
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="w-full mt-4 space-y-2"
-            >
-              <div className="px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                <p className="text-[12px] text-emerald-400 font-medium mb-1">Delegated spend executed!</p>
-                <a
-                  href={`https://sepolia.basescan.org/tx/${spendTxHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-400/80 hover:text-emerald-400 transition-colors"
-                >
-                  <ExternalLink size={10} />
-                  {spendTxHash.slice(0, 14)}...{spendTxHash.slice(-6)} — View on BaseScan
-                </a>
+          {isDelegation && (
+            <div className="w-full mt-6 px-4 py-3 rounded-xl bg-card border border-border/30 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[12px] font-medium text-foreground">Manage delegated spend in Activity</p>
+                <p className="text-[10px] text-muted-foreground/40 mt-0.5">
+                  Activity is the canonical control surface for allowed and blocked delegated spend tests.
+                </p>
               </div>
-            </motion.div>
+              <Link href="/activity" className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-semibold bg-primary/10 text-primary hover:bg-primary/15 transition-colors">
+                Open Activity
+              </Link>
+            </div>
           )}
         </div>
       </div>
