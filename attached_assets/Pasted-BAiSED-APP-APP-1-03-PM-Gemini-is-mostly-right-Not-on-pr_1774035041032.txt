@@ -1,0 +1,167 @@
+BAiSED APP
+APP
+ — 1:03 PM
+Gemini is mostly right.
+
+Not on product architecture.
+On presentation polish.
+
+What I agree with
+Button wrap is bad
+Yes.
+Requesting in MetaMask... wrapping is ugly and looks broken.
+
+Fix:
+use Requesting...
+or
+Open MetaMask
+with spinner
+and force single-line text.
+Red contrast is too weak
+Yes.
+The struck-through blocked $150.00 is too dark.
+
+Fix:
+brighten the blocked amount color
+keep strike, but don’t bury legibility
+
+Tag spam is real
+Yes.
+The delegation badge is repeated too many times.
+
+Especially:
+it does not belong in the Demo Actions card header
+it probably does not need to appear on every related row
+
+Demo Actions subtext is floating
+Yes.
+Allowed test: $5.00 / Blocked test: $150.00 is visually loose.
+
+Better:
+Run $5 spend
+Run $150 blocked spend
+or similar
+
+Hierarchy needs tightening
+Yes.
+The active delegation row should read more clearly as:
+current authority state
+
+not just another feed item floating above controls.
+
+---
+What I would not overdo
+I would not do a full redesign.
+The flow is finally stable.
+This should be a tight UI polish pass, not another architecture spiral.
+
+---
+
+My recommendation
+One last visual cleanup pass with exactly these goals:
+
+A. Fix button text wrapping
+shorten loading text
+enforce single-line buttons
+
+B. Improve blocked-state contrast
+brighter blocked amount / text
+keep strikethrough but readable
+C. Remove delegation tag from Demo Actions card
+keep the tag on the active delegation summary
+not in the control panel itself
+
+D. Fold the dollar amounts into button copy
+Change:
+Run allowed spend + Allowed spend: $5.00
+to
+Run $5 spend
+
+Change:
+Run blocked spend + Blocked spend: $150.00
+to
+Run $150 blocked spend
+
+E. Add explicit section label above current delegation
+Something like:
+ACTIVE DELEGATION
+
+That will tighten the hierarchy without changing the logic.
+
+---
+
+Short answer
+Gemini’s notes are good.
+They are polish-level valid.
+And they’re exactly the kind of last-pass cleanup that can make this feel premium instead of hackathon-fragile.
+
+If you want, I can execute just those five visual fixes and then freeze it again.
+DECENTRADEAD [WEN],  — 1:04 PM
+yes execute the visual fixes. use ui skills
+BAiSED APP
+APP
+ — 1:07 PM
+I’m keeping this to the five visual fixes only: button wrap, blocked contrast, badge spam, tighter demo button labels, and clearer delegation hierarchy. Then I’ll run the audit gate again and freeze it.
+Gemini’s right on the polish issues. I’m applying the five visual fixes now without touching the core flow logic again.
+Need contrast blocked amount/text.
+The five UI fixes are in: cleaner hierarchy, no badge spam in the control card, single-line buttons, stronger blocked contrast, and tighter action labels. I’m running the gate now before I freeze it again.
+The UI polish pass is done and passes the gate. Remote moved again, so I’m rebasing this exact visual cleanup on top before I give you the final receipt.
+Done.
+
+I applied the five UI fixes and audited them before returning.
+
+New receipt
+40234329 — rebased push containing:
+style: tighten delegated spend activity ui
+
+What changed
+Better hierarchy
+Changed:
+Delegation Control → Active Delegation
+
+That makes the top card read like current authority state, not another generic section.
+
+Removed badge spam in the control card
+Removed the repeated delegation badge from the Delegated Spend Tests card header.
+
+It still belongs on the active delegation summary / feed state, but not inside the button panel.
+
+Fixed button wrap risk
+Buttons now:
+use tighter copy
+enforce single-line layout with whitespace-nowrap
+
+Updated labels:
+Run allowed spend → Run $5 spend
+Run blocked spend → Run $150 blocked spend
+
+Loading copy also tightened to:
+Requesting...
+
+Removed floating subtext
+Removed:
+Allowed spend: $5.00
+Blocked spend: $150.00
+
+Those amounts are now embedded directly in button labels, which is cleaner.
+
+Improved blocked-state contrast
+Brightened blocked item presentation in Activity:
+merchant title now brighter rose
+amount uses stronger rose contrast
+intent text is more readable
+strikethrough remains, but no longer disappears into the background
+
+---
+
+Audit after changes
+pnpm run typecheck ✅
+PORT=3000 BASE_PATH=/ pnpm --filter @workspace/hashapp run build ✅
+
+Freeze recommendation
+This is the right point to freeze the UI again.
+The changes were polish-only and did not reopen the core flow.
+
+Sync target
+Replit should sync to:
+40234329
