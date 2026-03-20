@@ -167,8 +167,8 @@ importers:
   artifacts/api-server:
     dependencies:
       '@metamask/smart-accounts-kit':
-        specifier: 0.3.0
-        version: 0.3.0(viem@2.47.4(typescript@5.9.3)(zod@4.3.6))
+        specifier: 0.4.0-beta.1
+        version: 0.4.0-beta.1(viem@2.47.4(typescript@5.9.3)(zod@4.3.6))
       '@workspace/api-zod':
         specifier: workspace:*
         version: link:../../lib/api-zod
@@ -187,6 +187,9 @@ importers:
       express:
         specifier: ^5
         version: 5.2.1
+      openai:
+        specifier: ^6.29.0
+        version: 6.32.0(ws@8.18.3)(zod@4.3.6)
       viem:
         specifier: ^2.47.4
         version: 2.47.4(typescript@5.9.3)(zod@4.3.6)
@@ -811,10 +814,6 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@metamask/7715-permission-types@0.4.0':
-    resolution: {integrity: sha512-zRGASXeJ1LEbThi7fMXcP1xsoq/iXg/h9NL+lg1IhJUxOgO7An8TQs+Qvg8f+nGaYZnGlcWmhyEi8+razmRTgA==}
-    engines: {node: ^18.18 || >=20}
-
   '@metamask/7715-permission-types@0.5.0':
     resolution: {integrity: sha512-UTlAXhfVM83/dCtghIqZiPqJmeGa4KI2HhkKYjmeP0oFtwzsgDwFfNakdICC4VX82338AiyVVtbEFyx6t7SE1w==}
     engines: {node: ^18.18 || >=20}
@@ -822,10 +821,6 @@ packages:
   '@metamask/abi-utils@3.0.0':
     resolution: {integrity: sha512-a/l0DiSIr7+CBYVpHygUa3ztSlYLFCQMsklLna+t6qmNY9+eIO5TedNxhyIyvaJ+4cN7TLy0NQFbp9FV3X2ktg==}
     engines: {node: ^18.18 || ^20.14 || >=22}
-
-  '@metamask/delegation-abis@0.11.0':
-    resolution: {integrity: sha512-tnNGFDLQ5jfgPhHJaT5JwvF759nja1iGAG00REbk1Ufir+TxjxTmF8L9MbJifZmUh4fnyqV4Ik6NAOYVNBPVBg==}
-    engines: {node: ^18.18 || >=20}
 
   '@metamask/delegation-abis@0.12.0-beta.0':
     resolution: {integrity: sha512-2I+nk15BSCWy2YTNE3bxMxqTDUqUJBque5A91wXqn0e3NYLzSg3DEdtc8VebUVbgP9IoFhRhHioPwzd/z+xPoQ==}
@@ -835,19 +830,9 @@ packages:
     resolution: {integrity: sha512-a0vMu0pIOKD8AydSdSI991SY6BN0XzGhyXoaKbNg55NchyTyNMBuoAXZ92GS8+/jGtyIouQBglh6CUxhZZHmVw==}
     engines: {node: ^18.18 || >=20}
 
-  '@metamask/delegation-deployments@0.15.0':
-    resolution: {integrity: sha512-5nlEPy7OGfNTcwSQ2kP7S2IOg2kFj9B8zcEOP3UeJxsFGX4U4IjNKxGVLtNTFHEa8RWmiFkl0Ifz9kDq/63fRw==}
-    engines: {node: ^18.18 || >=20}
-
   '@metamask/delegation-deployments@0.16.0':
     resolution: {integrity: sha512-Fm+m+ZPQ1RC0V/PK0Qsoznaeom1ihAoQ7LX2qZl9OmmIKdoyVZQH3gp59hwpPuMyeSgNZ8Cqe3TBi61B7Ja+Pw==}
     engines: {node: ^18.18 || >=20}
-
-  '@metamask/smart-accounts-kit@0.3.0':
-    resolution: {integrity: sha512-WwaLwSB3WO5p0WpuxVEvTJbOZ1dr2wCBeq1IoEpv9EjFwiPNXlorji77PRskjQjFgFAc9XrERt4jWX7oua6N+Q==}
-    engines: {node: ^18.18 || >=20}
-    peerDependencies:
-      viem: ^2.31.4
 
   '@metamask/smart-accounts-kit@0.4.0-beta.1':
     resolution: {integrity: sha512-VSU27YjSpo3AEKvpLY3niwUSruMlnXu1R59eQgY4pqGE1xjKPi29kANbTrGzpH9KGq2PtJmpG5oIhuA7YX2+5g==}
@@ -2692,6 +2677,18 @@ packages:
   once@1.4.0:
     resolution: {integrity: sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==}
 
+  openai@6.32.0:
+    resolution: {integrity: sha512-j3k+BjydAf8yQlcOI7WUQMQTbbF5GEIMAE2iZYCOzwwB3S2pCheaWYp+XZRNAch4jWVc52PMDGRRjutao3lLCg==}
+    hasBin: true
+    peerDependencies:
+      ws: ^8.18.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      ws:
+        optional: true
+      zod:
+        optional: true
+
   orval@8.5.3:
     resolution: {integrity: sha512-+8Es2ZR3tPthzAL27X1a9AlboqTQ/w9U/PhMkp4vsLA9OvdkpXr+9f8lCfJUV/wtdX+lXBDQ4imx42Em943JSg==}
     engines: {node: '>=22.18.0'}
@@ -3553,8 +3550,6 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@metamask/7715-permission-types@0.4.0': {}
-
   '@metamask/7715-permission-types@0.5.0': {}
 
   '@metamask/abi-utils@3.0.0':
@@ -3563,8 +3558,6 @@ snapshots:
       '@metamask/utils': 11.10.0
     transitivePeerDependencies:
       - supports-color
-
-  '@metamask/delegation-abis@0.11.0': {}
 
   '@metamask/delegation-abis@0.12.0-beta.0': {}
 
@@ -3576,21 +3569,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@metamask/delegation-deployments@0.15.0': {}
-
   '@metamask/delegation-deployments@0.16.0': {}
-
-  '@metamask/smart-accounts-kit@0.3.0(viem@2.47.4(typescript@5.9.3)(zod@4.3.6))':
-    dependencies:
-      '@metamask/7715-permission-types': 0.4.0
-      '@metamask/delegation-abis': 0.11.0
-      '@metamask/delegation-core': 0.3.0
-      '@metamask/delegation-deployments': 0.15.0
-      buffer: 6.0.3
-      viem: 2.47.4(typescript@5.9.3)(zod@4.3.6)
-      webauthn-p256: 0.0.10
-    transitivePeerDependencies:
-      - supports-color
 
   '@metamask/smart-accounts-kit@0.4.0-beta.1(viem@2.47.4(typescript@5.9.3)(zod@3.25.76))':
     dependencies:
@@ -3600,6 +3579,18 @@ snapshots:
       '@metamask/delegation-deployments': 0.16.0
       buffer: 6.0.3
       viem: 2.47.4(typescript@5.9.3)(zod@3.25.76)
+      webauthn-p256: 0.0.10
+    transitivePeerDependencies:
+      - supports-color
+
+  '@metamask/smart-accounts-kit@0.4.0-beta.1(viem@2.47.4(typescript@5.9.3)(zod@4.3.6))':
+    dependencies:
+      '@metamask/7715-permission-types': 0.5.0
+      '@metamask/delegation-abis': 0.12.0-beta.0
+      '@metamask/delegation-core': 0.3.0
+      '@metamask/delegation-deployments': 0.16.0
+      buffer: 6.0.3
+      viem: 2.47.4(typescript@5.9.3)(zod@4.3.6)
       webauthn-p256: 0.0.10
     transitivePeerDependencies:
       - supports-color
@@ -5436,6 +5427,11 @@ snapshots:
   once@1.4.0:
     dependencies:
       wrappy: 1.0.2
+
+  openai@6.32.0(ws@8.18.3)(zod@4.3.6):
+    optionalDependencies:
+      ws: 8.18.3
+      zod: 4.3.6
 
   orval@8.5.3(prettier@3.8.1)(typescript@5.9.3):
     dependencies:
