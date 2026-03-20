@@ -185,7 +185,7 @@ export default function Activity() {
           <div className="flex flex-col gap-3">
             <div className="flex flex-col">
               <h2 className="text-[10px] font-semibold text-muted-foreground/35 uppercase tracking-[0.2em] pl-1 mb-2">
-                Delegation Control
+                Active Delegation
               </h2>
               {stableDelegationItem.status === 'PENDING' ? (
                 <PendingCard
@@ -206,36 +206,28 @@ export default function Activity() {
 
             {activeDelegationPermission && (
               <div className="rounded-2xl border border-white/[0.06] bg-card/70 px-4 py-4">
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <div>
-                    <h3 className="text-[13px] font-semibold text-foreground">Delegated Spend Tests</h3>
-                    <p className="text-[11px] text-muted-foreground/45 mt-0.5">
-                      Test one spend within scope and one that exceeds delegated authority.
-                    </p>
-                  </div>
-                  <TruthBadge type="delegation" txHash={recentDelegationItem?.txHash} expiresAt={activeDelegationPermission.delegationExpiry} />
+                <div className="mb-3">
+                  <h3 className="text-[13px] font-semibold text-foreground">Delegated Spend Tests</h3>
+                  <p className="text-[11px] text-muted-foreground/45 mt-0.5">
+                    Test one spend within scope and one that exceeds delegated authority.
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     onClick={() => void runDelegatedSpendDemo('5', 'allowed')}
                     disabled={demoActionState !== 'idle'}
-                    className="w-full py-3 rounded-xl text-[13px] font-semibold transition-all bg-primary text-primary-foreground hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none flex items-center justify-center gap-2"
+                    className="w-full py-3 rounded-xl text-[13px] font-semibold transition-all bg-primary text-primary-foreground hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none flex items-center justify-center gap-2 whitespace-nowrap"
                   >
-                    {demoActionState === 'allowed-running' ? <><Loader2 size={14} className="animate-spin" /> Executing allowed spend…</> : 'Run allowed spend'}
+                    {demoActionState === 'allowed-running' ? <><Loader2 size={14} className="animate-spin" /> Requesting…</> : 'Run $5 spend'}
                   </button>
                   <button
                     onClick={() => void runDelegatedSpendDemo('150', 'blocked')}
                     disabled={demoActionState !== 'idle'}
-                    className="w-full py-3 rounded-xl text-[13px] font-semibold transition-all bg-rose-500/12 text-rose-300 border border-rose-500/20 hover:bg-rose-500/18 active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none flex items-center justify-center gap-2"
+                    className="w-full py-3 rounded-xl text-[13px] font-semibold transition-all bg-rose-500/12 text-rose-300 border border-rose-500/20 hover:bg-rose-500/18 active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none flex items-center justify-center gap-2 whitespace-nowrap"
                   >
-                    {demoActionState === 'blocked-running' ? <><Loader2 size={14} className="animate-spin" /> Testing blocked spend…</> : 'Run blocked spend'}
+                    {demoActionState === 'blocked-running' ? <><Loader2 size={14} className="animate-spin" /> Requesting…</> : 'Run $150 blocked spend'}
                   </button>
-                </div>
-
-                <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground/40">
-                  <span>Allowed spend: $5.00</span>
-                  <span>Blocked spend: $150.00</span>
                 </div>
 
                 {demoActionError && (
@@ -360,15 +352,15 @@ function FeedCard({
       
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-baseline mb-1">
-          <h3 className={`text-[14px] font-semibold truncate pr-3 ${isBlocked ? 'text-foreground/50' : 'text-foreground'}`}>
+          <h3 className={`text-[14px] font-semibold truncate pr-3 ${isBlocked ? 'text-rose-300/90' : 'text-foreground'}`}>
             {isSwap ? 'Swap' : item.merchant}
           </h3>
-          <span className={`text-[14px] font-semibold tabular-nums shrink-0 ${isBlocked ? 'text-muted-foreground/35 line-through decoration-rose-500/40' : 'text-foreground'}`}>
+          <span className={`text-[14px] font-semibold tabular-nums shrink-0 ${isBlocked ? 'text-rose-300/85 line-through decoration-rose-400/70' : 'text-foreground'}`}>
             {item.amountStr}
           </span>
         </div>
         <div className="flex items-center gap-1.5 mt-0.5">
-          <p className={`text-[11px] truncate leading-relaxed flex-1 min-w-0 ${isBlocked ? 'text-muted-foreground/35' : 'text-muted-foreground/50'}`}>{item.intent}</p>
+          <p className={`text-[11px] truncate leading-relaxed flex-1 min-w-0 ${isBlocked ? 'text-rose-200/55' : 'text-muted-foreground/50'}`}>{item.intent}</p>
           <StatusDot status={item.status} />
         </div>
         {(item.privateReasoningUsed || badgeType) && (
