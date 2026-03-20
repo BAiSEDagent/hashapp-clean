@@ -28,27 +28,54 @@ const TRUSTED_DESTINATIONS = [
 ];
 
 export default function Activity() {
-  const { feed, approvePending, declinePending, connectedAgent } = useDemo();
+  const { feed, approvePending, declinePending, connectedAgent, spendPermissions } = useDemo();
   const { isConnected } = useAccount();
   const [, setLocation] = useLocation();
 
   const pendingItem = feed.find(item => item.status === 'PENDING');
+  const activeDelegationPermission = spendPermissions.find(
+    permission => permission.isDelegation && permission.vendor === 'DataStream Pro' && permission.state === 'active',
+  );
+  const recentDelegationItem = feed.find(
+    item => item.isDelegation && item.merchant === 'DataStream Pro' && (item.status === 'APPROVED' || item.status === 'AUTO_APPROVED'),
+  );
+
   const shouldShowDelegationControl = USE_METAMASK_DELEGATION && isConnected;
   const stableDelegationItem: FeedItem | null = shouldShowDelegationControl
-    ? (pendingItem ?? {
-        id: 'delegation-control',
-        dateGroup: 'TODAY',
-        merchant: 'DataStream Pro',
-        merchantColor: 'bg-purple-600',
-        merchantInitial: 'D',
-        amount: 89.0,
-        amountStr: '$89.00',
-        intent: `${connectedAgent?.name ?? 'Agent'} is requesting a recurring spend permission — $89 USDC/mo for real-time market data from DataStream Pro`,
-        status: 'PENDING',
-        statusMessage: 'Spend permission · needs approval',
-        timestamp: 'Now',
-        category: 'Data Services',
-      })
+    ? (
+        pendingItem
+        ?? (activeDelegationPermission ? {
+          id: 'delegation-control',
+          dateGroup: 'TODAY',
+          merchant: 'DataStream Pro',
+          merchantColor: 'bg-purple-600',
+          merchantInitial: 'D',
+          amount: 89.0,
+          amountStr: '$89.00',
+          intent: `${connectedAgent?.name ?? 'Agent'} has delegated periodic USDC authority for real-time market data from DataStream Pro`,
+          status: 'APPROVED',
+          statusMessage: 'Delegation active',
+          timestamp: 'Now',
+          category: 'Data Services',
+          isDelegation: true,
+          isReal: true,
+          txHash: recentDelegationItem?.txHash,
+          delegationExpiry: activeDelegationPermission.delegationExpiry,
+        } : {
+          id: 'delegation-control',
+          dateGroup: 'TODAY',
+          merchant: 'DataStream Pro',
+          merchantColor: 'bg-purple-600',
+          merchantInitial: 'D',
+          amount: 89.0,
+          amountStr: '$89.00',
+          intent: `${connectedAgent?.name ?? 'Agent'} is requesting a recurring spend permission — $89 USDC/mo for real-time market data from DataStream Pro`,
+          status: 'PENDING',
+          statusMessage: 'Spend permission · needs approval',
+          timestamp: 'Now',
+          category: 'Data Services',
+        })
+      )
     : null;
 
   const historyFeed = stableDelegationItem ? feed.filter(item => item.id !== stableDelegationItem.id) : feed;
@@ -108,11 +135,21 @@ export default function Activity() {
             <h2 className="text-[10px] font-semibold text-muted-foreground/35 uppercase tracking-[0.2em] pl-1 mb-2">
               Delegation Control
             </h2>
-            <PendingCard
-              item={stableDelegationItem}
-              onApprove={approvePending}
-              onDecline={() => declinePending(stableDelegationItem.id)}
-            />
+            {stableDelegationItem.status === 'PENDING' ? (
+              <PendingCard
+                item={stableDelegationItem}
+                onApprove={approvePending}
+                onDecline={() => declinePending(stableDelegationItem.id)}
+              />
+            ) : (
+              <FeedCard
+                item={stableDelegationItem}
+                isLast
+                onApprove={approvePending}
+                onDecline={() => declinePending(stableDelegationItem.id)}
+                onClick={() => stableDelegationItem.id !== 'delegation-control' && setLocation(`/receipt/${stableDelegationItem.id}`)}
+              />
+            )}
           </div>
         )}
 
