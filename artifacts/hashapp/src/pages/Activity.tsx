@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Loader2, ExternalLink, ArrowDownUp, Eye } from 'lucide-react';
 import { useLocation } from 'wouter';
-import { useAccount, useWriteContract, useConnect, useWalletClient } from 'wagmi';
+import { useAccount, useWriteContract, useWalletClient } from 'wagmi';
 import { waitForTransactionReceipt, readContract } from 'wagmi/actions';
 import { walletConfig } from '@/config/wallet';
 import { USE_METAMASK_DELEGATION, DELEGATION_CHAIN_ID } from '@/config/delegation';
@@ -29,10 +29,12 @@ const TRUSTED_DESTINATIONS = [
 
 export default function Activity() {
   const { feed, approvePending, declinePending, connectedAgent } = useDemo();
+  const { isConnected } = useAccount();
   const [, setLocation] = useLocation();
 
   const pendingItem = feed.find(item => item.status === 'PENDING');
-  const stableDelegationItem: FeedItem | null = connectedAgent
+  const shouldShowDelegationControl = USE_METAMASK_DELEGATION && isConnected;
+  const stableDelegationItem: FeedItem | null = shouldShowDelegationControl
     ? (pendingItem ?? {
         id: 'delegation-control',
         dateGroup: 'TODAY',
@@ -41,7 +43,7 @@ export default function Activity() {
         merchantInitial: 'D',
         amount: 89.0,
         amountStr: '$89.00',
-        intent: `${connectedAgent.name} is requesting a recurring spend permission — $89 USDC/mo for real-time market data from DataStream Pro`,
+        intent: `${connectedAgent?.name ?? 'Agent'} is requesting a recurring spend permission — $89 USDC/mo for real-time market data from DataStream Pro`,
         status: 'PENDING',
         statusMessage: 'Spend permission · needs approval',
         timestamp: 'Now',
