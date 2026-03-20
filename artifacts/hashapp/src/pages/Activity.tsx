@@ -31,7 +31,27 @@ export default function Activity() {
   const { feed, approvePending, declinePending, connectedAgent } = useDemo();
   const [, setLocation] = useLocation();
 
-  const groupedFeed = feed.reduce((acc, item) => {
+  const pendingItem = feed.find(item => item.status === 'PENDING');
+  const stableDelegationItem: FeedItem | null = connectedAgent
+    ? (pendingItem ?? {
+        id: 'delegation-control',
+        dateGroup: 'TODAY',
+        merchant: 'DataStream Pro',
+        merchantColor: 'bg-purple-600',
+        merchantInitial: 'D',
+        amount: 89.0,
+        amountStr: '$89.00',
+        intent: `${connectedAgent.name} is requesting a recurring spend permission — $89 USDC/mo for real-time market data from DataStream Pro`,
+        status: 'PENDING',
+        statusMessage: 'Spend permission · needs approval',
+        timestamp: 'Now',
+        category: 'Data Services',
+      })
+    : null;
+
+  const historyFeed = stableDelegationItem ? feed.filter(item => item.id !== stableDelegationItem.id) : feed;
+
+  const groupedFeed = historyFeed.reduce((acc, item) => {
     if (!acc[item.dateGroup]) acc[item.dateGroup] = [];
     acc[item.dateGroup].push(item);
     return acc;
@@ -81,6 +101,19 @@ export default function Activity() {
       </div>
 
       <div className="px-5 pb-8 flex flex-col gap-8">
+        {stableDelegationItem && (
+          <div className="flex flex-col">
+            <h2 className="text-[10px] font-semibold text-muted-foreground/35 uppercase tracking-[0.2em] pl-1 mb-2">
+              Delegation Control
+            </h2>
+            <PendingCard
+              item={stableDelegationItem}
+              onApprove={approvePending}
+              onDecline={() => declinePending(stableDelegationItem.id)}
+            />
+          </div>
+        )}
+
         {Object.entries(groupedFeed).map(([dateGroup, items]) => (
           <div key={dateGroup} className="flex flex-col">
             <h2 className="text-[10px] font-semibold text-muted-foreground/35 uppercase tracking-[0.2em] pl-1 mb-2">

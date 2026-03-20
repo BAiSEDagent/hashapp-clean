@@ -271,6 +271,23 @@ const INITIAL_RULES: Rule[] = [
   { id: 'r8', name: 'Approved tokens only', description: 'Only allow swaps between ETH, WETH, and USDC', enabled: true },
 ];
 
+function createDelegationRequestItem(agentName?: string): FeedItem {
+  return {
+    id: 'delegation-control',
+    dateGroup: 'TODAY',
+    merchant: 'DataStream Pro',
+    merchantColor: 'bg-purple-600',
+    merchantInitial: 'D',
+    amount: 89.00,
+    amountStr: '$89.00',
+    intent: `${agentName ?? 'Agent'} is requesting a recurring spend permission — $89 USDC/mo for real-time market data from DataStream Pro`,
+    status: 'PENDING',
+    statusMessage: 'Spend permission · needs approval',
+    timestamp: 'Just now',
+    category: 'Data Services',
+  };
+}
+
 const STORAGE_KEY_PREFIX = 'hashapp_demo_state';
 const AVATAR_STORAGE_KEY_PREFIX = 'hashapp_agent_avatar';
 const AGENT_STORAGE_KEY_PREFIX = 'hashapp_connected_agent';
@@ -419,21 +436,8 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isConnected || stage !== 'INITIAL') return;
     const timer = setTimeout(() => {
-      const pendingTx: FeedItem = {
-        id: 'tx-1-pending',
-        dateGroup: 'TODAY',
-        merchant: 'DataStream Pro',
-        merchantColor: 'bg-purple-600',
-        merchantInitial: 'D',
-        amount: 89.00,
-        amountStr: '$89.00',
-        intent: `${connectedAgent?.name ?? 'Agent'} is requesting a recurring spend permission — $89 USDC/mo for real-time market data from DataStream Pro`,
-        status: 'PENDING',
-        statusMessage: 'Spend permission · needs approval',
-        timestamp: 'Just now',
-        category: 'Data Services'
-      };
-      setFeed(prev => [pendingTx, ...prev]);
+      const pendingTx = createDelegationRequestItem(connectedAgent?.name);
+      setFeed(prev => [pendingTx, ...prev.filter(item => item.id !== pendingTx.id)]);
       setStage('PENDING_ADDED');
     }, 3000);
     return () => clearTimeout(timer);
@@ -483,35 +487,38 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     },
   ) => {
     const isDelegation = !!delegationFields;
-    setFeed(prev => prev.map(item => 
-      item.id === id 
-        ? { 
-            ...item, 
-            status: 'APPROVED' as StatusType, 
-            statusMessage: isDelegation
-              ? 'Approved — delegation granted via MetaMask'
-              : realTxHash
-                ? 'Approved — spend permission granted onchain'
-                : 'Approved — spend permission granted (demo)',
-            txHash: realTxHash,
-            isReal: !!realTxHash || isDelegation,
-            onchainVerified: isDelegation ? undefined : onchainVerified,
-            permissionsContext: delegationFields?.permissionsContext,
-            delegationManager: delegationFields?.delegationManager,
-            isDelegation,
-            spendToken: delegationFields?.spendToken,
-            delegationExpiry: delegationFields?.delegationExpiry,
-            ...(veniceFields ? {
-              privateReasoningUsed: veniceFields.privateReasoningUsed,
-              reasoningProvider: veniceFields.reasoningProvider,
-              reasonSummary: veniceFields.failed ? 'Private analysis unavailable' : veniceFields.reasonSummary,
-              disclosureSummary: veniceFields.failed
-                ? 'Venice was requested but could not complete analysis. Action approved without private review.'
-                : veniceFields.disclosureSummary,
-            } : {}),
-          } 
-        : item
-    ));
+    const fallbackItem = createDelegationRequestItem(connectedAgent?.name);
+    setFeed(prev => {
+      const hasMatch = prev.some(item => item.id === id);
+      const nextItem = {
+        ...(hasMatch ? prev.find(item => item.id === id)! : fallbackItem),
+        id,
+        status: 'APPROVED' as StatusType,
+        statusMessage: isDelegation
+          ? 'Approved — delegation granted via MetaMask'
+          : realTxHash
+            ? 'Approved — spend permission granted onchain'
+            : 'Approved — spend permission granted (demo)',
+        txHash: realTxHash,
+        isReal: !!realTxHash || isDelegation,
+        onchainVerified: isDelegation ? undefined : onchainVerified,
+        permissionsContext: delegationFields?.permissionsContext,
+        delegationManager: delegationFields?.delegationManager,
+        isDelegation,
+        spendToken: delegationFields?.spendToken,
+        delegationExpiry: delegationFields?.delegationExpiry,
+        ...(veniceFields ? {
+          privateReasoningUsed: veniceFields.privateReasoningUsed,
+          reasoningProvider: veniceFields.reasoningProvider,
+          reasonSummary: veniceFields.failed ? 'Private analysis unavailable' : veniceFields.reasonSummary,
+          disclosureSummary: veniceFields.failed
+            ? 'Venice was requested but could not complete analysis. Action approved without private review.'
+            : veniceFields.disclosureSummary,
+        } : {}),
+      };
+      const withoutItem = prev.filter(item => item.id !== id);
+      return [nextItem, ...withoutItem];
+    });
     setSpendPermissions(prev => [...prev, {
       id: 'sp-3',
       vendor: 'DataStream Pro',
@@ -532,7 +539,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
       delegationExpiry: delegationFields?.delegationExpiry,
     }]);
     if (stage === 'PENDING_ADDED') setStage('APPROVED');
-  }, [stage]);
+  }, [stage, connectedAgent]);
 
   const recordDelegationSpend = useCallback((
     permissionId: string,
@@ -699,13 +706,20 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const declinePending = useCallback((id: string) => {
-    setFeed(prev => prev.map(item => 
-      item.id === id 
-        ? { ...item, status: 'DECLINED' as StatusType, statusMessage: 'Declined by you' } 
-        : item
-    ));
+    const fallbackItem = createDelegationRequestItem(connectedAgent?.name);
+    setFeed(prev => {
+      const hasMatch = prev.some(item => item.id === id);
+      const nextItem = {
+        ...(hasMatch ? prev.find(item => item.id === id)! : fallbackItem),
+        id,
+        status: 'DECLINED' as StatusType,
+        statusMessage: 'Declined by you',
+      };
+      const withoutItem = prev.filter(item => item.id !== id);
+      return [nextItem, ...withoutItem];
+    });
     if (stage === 'PENDING_ADDED') setStage('APPROVED');
-  }, [stage]);
+  }, [stage, connectedAgent]);
 
   const toggleRule = useCallback((id: string) => {
     setRules(prev => prev.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r));
