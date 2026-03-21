@@ -50,25 +50,27 @@ export default function Agent() {
 
 function AgentEmptyState({ onConnect }: { onConnect: () => void }) {
   return (
-    <div className="flex flex-col min-h-full pb-8 items-center justify-center px-6">
-      <div className="flex flex-col items-center text-center max-w-[280px]">
-        <div className="w-20 h-20 rounded-full bg-zinc-800/60 border border-zinc-700/40 flex items-center justify-center mb-6">
-          <Bot size={32} className="text-zinc-500" />
+    <div className="min-h-full flex flex-col px-6 pt-12 pb-8">
+      <div className="flex-1 flex items-center justify-center">
+        <div className="w-full max-w-[330px] flex flex-col items-center text-center -translate-y-6">
+          <div className="w-20 h-20 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-6 shadow-inner">
+            <Bot size={30} className="text-zinc-500" />
+          </div>
+          <h1 className="text-[24px] font-bold tracking-tight mb-2">No Agent Set Up</h1>
+          <p className="text-[14px] text-muted-foreground/45 leading-relaxed mb-8 max-w-[300px]">
+            Name your agent so it can request payments and act within your spending rules.
+          </p>
+          <button
+            onClick={onConnect}
+            className="w-full max-w-[320px] py-3.5 rounded-2xl text-[15px] font-semibold transition-colors bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/80 shadow-lg shadow-primary/20"
+          >
+            Set Up Agent
+          </button>
         </div>
-        <h1 className="text-[22px] font-bold tracking-tight mb-2">No Agent Set Up</h1>
-        <p className="text-[13px] text-muted-foreground/50 leading-relaxed mb-8">
-          Name your agent so it can request payments and act within your spending rules.
-        </p>
-        <button
-          onClick={onConnect}
-          className="w-full py-3 rounded-xl text-[14px] font-semibold transition-colors bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/80"
-        >
-          Set Up Agent
-        </button>
       </div>
 
-      <div className="mt-auto pt-10 text-center pb-4">
-        <p className="text-[10px] text-muted-foreground/20 font-medium tracking-widest uppercase">
+      <div className="text-center pb-2">
+        <p className="text-[10px] text-muted-foreground/18 font-medium tracking-widest uppercase">
           Bring your own agent
         </p>
       </div>
