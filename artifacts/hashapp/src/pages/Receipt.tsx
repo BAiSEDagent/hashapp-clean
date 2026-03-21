@@ -179,7 +179,7 @@ export default function Receipt() {
                   {connectedAgent?.address ? (
                     <span className="text-[9px] text-muted-foreground/30 font-mono tracking-wide">{connectedAgent.address}</span>
                   ) : (
-                    <span className="text-[9px] text-muted-foreground/20">Demo agent</span>
+                    <span className="text-[9px] text-muted-foreground/20">Research agent</span>
                   )}
                 </div>
               </div>

@@ -6,16 +6,16 @@ Show Hashapp as the spending app for a research agent.
 
 ### Demo actor
 - Human owner
-- Agent: **Scout**
+- Agent: **Research Agent**
 
 ### Demo sequence
 1. User opens Hashapp directly on the **Activity** screen.
-2. Feed shows recent activity from Scout.
+2. Feed shows recent activity from Research Agent.
 3. A new purchase request arrives live.
 4. User approves the request.
 5. Successful receipt appears in the feed.
 6. User visits rules and changes one plain-English policy.
-7. Scout attempts another purchase.
+7. Research Agent attempts another purchase.
 8. Request is blocked.
 9. Blocked receipt appears in the feed with a clear reason.
 
@@ -40,7 +40,7 @@ This is the product. Trust is made visible here.
 - jump to request needing approval
 
 #### Example rows
-- Scout bought research credits for today’s market scan.
+- Research Agent bought research credits for today’s market scan.
 - Approved — within research budget.
 - Blocked — exceeds daily research limit.
 - New vendor needs confirmation.

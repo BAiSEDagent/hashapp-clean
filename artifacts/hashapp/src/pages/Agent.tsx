@@ -383,13 +383,13 @@ function AgentActiveState({
               value={USE_METAMASK_DELEGATION ? 'MetaMask Delegation (ERC-7710)' : 'SpendPermissionManager'}
             />
             <div className="flex items-center justify-between py-0.5">
-              <span className="text-[12px] text-muted-foreground/40">Spent this month</span>
+              <span className="text-[12px] text-muted-foreground/40">Spent today</span>
               <div className="flex items-center gap-2">
                 <span className="text-[12px] font-medium text-foreground/90">${totalSpent.toFixed(2)}</span>
                 <TruthBadge type="demo" />
               </div>
             </div>
-            <StateRow label="Budget" value={`$${totalBudget}/mo across ${activePermissions.length} permissions`} />
+            <StateRow label="Budget" value={`$${totalBudget}/day across ${activePermissions.length} permissions`} />
             <StateRow label="Constraints" value={`${activeRulesCount} active rules`} />
           </div>
         </div>

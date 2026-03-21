@@ -17,20 +17,20 @@ Use a real agent identity with:
 - ENS / Basename if available
 
 Working name options:
-- Scout
+- Research Agent
 - Kai
 - Atlas
 
-Current favorite: **Scout**
+Current favorite: **Research Agent**
 
 ## Demo thesis
 Your research agent should be able to buy what it needs without getting your whole wallet.
 
 ## 90-second demo loop
 1. Open Hashapp on the **activity feed**.
-2. Show recent purchases from Scout with reasoning and status.
+2. Show recent purchases from Research Agent with reasoning and status.
 3. New live request appears:
-   - Scout wants to spend a small amount on research credits / API access for today’s market scan.
+   - Research Agent wants to spend a small amount on research credits / API access for today’s market scan.
 4. User taps approve.
 5. Receipt lands in the feed with:
    - agent name
@@ -40,12 +40,12 @@ Your research agent should be able to buy what it needs without getting your who
    - short reason
    - success state
 6. User flips a plain-language rule.
-7. Scout tries another request that now violates policy.
+7. Research Agent tries another request that now violates policy.
 8. Request is auto-blocked.
 9. Feed shows a clear human-readable blocked state.
 
 ## Example feed copy
-- Scout bought research credits for today’s market scan.
+- Research Agent bought research credits for today’s market scan.
 - Approved — within research budget.
 - Blocked — exceeds daily research limit.
 - New vendor needs confirmation.

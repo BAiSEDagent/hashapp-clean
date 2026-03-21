@@ -18,7 +18,7 @@ const BADGE_CONFIG = {
     text: 'text-orange-400/80',
     dot: 'bg-orange-400',
     label: 'Delegation',
-    caveat: 'Status unverified — may be revoked onchain',
+    caveat: 'Active · revocable onchain',
   },
   expired: {
     bg: 'bg-zinc-500/8',

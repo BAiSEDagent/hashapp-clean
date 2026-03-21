@@ -71,7 +71,7 @@ export default function Activity() {
           merchantInitial: 'D',
           amount: 89.0,
           amountStr: '$89.00',
-          intent: `${connectedAgent?.name ?? 'Agent'} is requesting a recurring spend permission — $89 USDC/mo for real-time market data from DataStream Pro`,
+          intent: `${connectedAgent?.name ?? 'Research Agent'} is requesting delegated authority — up to $89 USDC/day for real-time market data from DataStream Pro`,
           status: 'PENDING',
           statusMessage: 'Spend permission · needs approval',
           timestamp: 'Now',
@@ -663,7 +663,7 @@ function PendingCard({
               <h3 className="text-[17px] font-semibold text-foreground leading-tight">{item.merchant}</h3>
               <div className="text-right shrink-0 ml-3">
                 <span className="text-[22px] font-bold tracking-tight">{item.amountStr}</span>
-                <span className="text-[12px] font-medium text-muted-foreground/50">/mo</span>
+                <span className="text-[12px] font-medium text-muted-foreground/50">/day</span>
               </div>
             </div>
             <p className="text-[12px] text-muted-foreground/60 leading-relaxed pr-2">

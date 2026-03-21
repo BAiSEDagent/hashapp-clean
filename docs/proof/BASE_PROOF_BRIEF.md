@@ -10,9 +10,9 @@ This is not a full production implementation. It is a narrow technical checkpoin
 ## Success criteria
 The proof is successful if we can demonstrate:
 1. Human sets policy params
-2. Human issues scoped authority to Scout
-3. Scout performs one in-bounds action successfully
-4. Scout attempts one out-of-bounds action
+2. Human issues scoped authority to Research Agent
+3. Research Agent performs one in-bounds action successfully
+4. Research Agent attempts one out-of-bounds action
 5. The out-of-bounds action is rejected automatically by the permission boundary
 
 ## Scope
@@ -28,16 +28,16 @@ At minimum:
 - spend cap
 - expiry window
 - allowed payee or call target
-- executor identity (Scout)
+- executor identity (Research Agent)
 
 ## Suggested example
 ### In-bounds case
-- Scout is allowed to spend up to `$50 USDC`
+- Research Agent is allowed to spend up to `$50 USDC`
 - only to an approved research vendor / call target
 - within an active expiry window
 
 ### Out-of-bounds case
-- Scout attempts `$89 USDC`
+- Research Agent attempts `$89 USDC`
 - or a different vendor / target
 - or after expiry
 

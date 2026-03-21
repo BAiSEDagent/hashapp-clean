@@ -288,7 +288,7 @@ function createDelegationRequestItem(agentName?: string): FeedItem {
     merchantInitial: 'D',
     amount: 89.00,
     amountStr: '$89.00',
-    intent: `${agentName ?? 'Agent'} is requesting a recurring spend permission — $89 USDC/mo for real-time market data from DataStream Pro`,
+    intent: `${agentName ?? 'Research Agent'} is requesting delegated authority — up to $89 USDC/day for real-time market data from DataStream Pro`,
     status: 'PENDING',
     statusMessage: 'Spend permission · needs approval',
     timestamp: 'Just now',

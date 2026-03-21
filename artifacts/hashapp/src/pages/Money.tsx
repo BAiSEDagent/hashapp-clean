@@ -94,7 +94,7 @@ export default function Money() {
               <div className="mt-5 pt-4 border-t border-white/[0.06]">
                 <div className="flex justify-between items-center">
                   <span className="text-[11px] text-muted-foreground/40">Active permission allowances</span>
-                  <span className="text-[13px] font-semibold tabular-nums">${totalPermissionAllowance}/mo</span>
+                  <span className="text-[13px] font-semibold tabular-nums">${totalPermissionAllowance}/day</span>
                 </div>
                 <div className="flex justify-between items-center mt-1">
                   <div className="flex items-center gap-1.5">
@@ -112,7 +112,7 @@ export default function Money() {
           <div className="bg-card rounded-2xl p-4 border border-border/30">
             <span className="text-[10px] text-muted-foreground/45 font-medium uppercase tracking-wider">Active Permissions</span>
             <p className="text-[22px] font-bold tracking-tight mt-1">{activePermissions.length}</p>
-            <p className="text-[10px] text-muted-foreground/30 mt-0.5">${totalPermissionAllowance} USDC/mo</p>
+            <p className="text-[10px] text-muted-foreground/30 mt-0.5">${totalPermissionAllowance} USDC/day</p>
           </div>
           <div className="bg-card rounded-2xl p-4 border border-border/30">
             <div className="flex items-center gap-1.5">
@@ -152,13 +152,15 @@ export default function Money() {
           <ArrowRight size={14} className="text-muted-foreground/25 shrink-0" />
         </div>
 
-        <button
-          onClick={resetDemo}
-          className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground/25 hover:text-muted-foreground/50 transition-colors mt-2 py-2"
-        >
-          <RefreshCw size={11} />
-          Reset demo state
-        </button>
+        {import.meta.env.DEV && (
+          <button
+            onClick={resetDemo}
+            className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground/25 hover:text-muted-foreground/50 transition-colors mt-2 py-2"
+          >
+            <RefreshCw size={11} />
+            Reset demo state
+          </button>
+        )}
       </div>
 
       <div className="mt-auto pt-4 text-center pb-4">

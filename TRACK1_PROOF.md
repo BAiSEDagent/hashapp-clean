@@ -9,29 +9,29 @@ Hashapp is no longer just a design or product concept. We now have a real Base-n
 
 ## Proof summary
 Using Base Sepolia and the audited `SpendPermissionManager`, we demonstrated that:
-1. a human smart wallet can grant Scout bounded spending authority
-2. Scout can spend within that authority successfully
+1. a human smart wallet can grant Research Agent bounded spending authority
+2. Research Agent can spend within that authority successfully
 3. Base rejects out-of-bounds behavior automatically with named onchain errors
 4. the proof requires no custom Solidity
 
 ## What succeeded
-- Human smart wallet approved a spend permission for Scout
-- Scout successfully spent within a 50 USDC/day bound
+- Human smart wallet approved a spend permission for Research Agent
+- Research Agent successfully spent within a 50 USDC/day bound
 - successful approval and spend transactions were confirmed onchain
 
 ## What was rejected
 ### Over-limit spend
-Scout attempted to spend after the allowance was exhausted.
+Research Agent attempted to spend after the allowance was exhausted.
 Rejected with:
 - `ExceededSpendPermission`
 
 ### Expired permission
-Scout attempted to spend under an expired permission.
+Research Agent attempted to spend under an expired permission.
 Rejected with:
 - `AfterSpendPermissionEnd`
 
 ### Wrong spender
-Scout attempted to spend under a permission granted to another spender.
+Research Agent attempted to spend under a permission granted to another spender.
 Rejected with:
 - `InvalidSender`
 
