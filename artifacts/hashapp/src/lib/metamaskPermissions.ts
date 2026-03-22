@@ -21,6 +21,48 @@ export interface GrantedDelegation {
   expiry: number;
 }
 
+function isHexAddress(value: unknown): value is `0x${string}` {
+  return typeof value === 'string' && /^0x[a-fA-F0-9]{40}$/.test(value);
+}
+
+function isHexContext(value: unknown): value is `0x${string}` {
+  return typeof value === 'string' && /^0x[a-fA-F0-9]+$/.test(value);
+}
+
+function validateGrantedPermissionShape(grantedPermissions: unknown) {
+  if (!Array.isArray(grantedPermissions) || grantedPermissions.length === 0) {
+    throw new Error('Wallet returned no delegated permissions');
+  }
+
+  const firstPermission = grantedPermissions[0] as Record<string, unknown> | undefined;
+  if (!firstPermission) {
+    throw new Error('Wallet returned an empty delegated permission entry');
+  }
+
+  const permissionsContext = firstPermission.context;
+  const delegationManager = firstPermission.delegationManager;
+  if (!isHexContext(permissionsContext)) {
+    throw new Error('Wallet returned delegated permission without a valid context');
+  }
+  if (!isHexAddress(delegationManager)) {
+    throw new Error('Wallet returned delegated permission without a valid delegation manager');
+  }
+
+  const permission = firstPermission.permission as Record<string, unknown> | undefined;
+  const permissionData = permission?.data as Record<string, unknown> | undefined;
+  if (permission?.type !== 'erc20-token-periodic') {
+    throw new Error('Wallet returned unexpected delegated permission type');
+  }
+  if (!permissionData || !isHexAddress(permissionData.tokenAddress)) {
+    throw new Error('Wallet returned delegated permission without a valid token address');
+  }
+
+  return {
+    permissionsContext,
+    delegationManager,
+  };
+}
+
 function normalizeDelegationError(err: unknown): Error {
   const message = err instanceof Error ? err.message : String(err);
   const code = typeof err === 'object' && err !== null && 'code' in err ? String((err as { code?: unknown }).code) : '';
@@ -88,16 +130,7 @@ export async function requestDelegatedPermission(
       console.log('[Delegation] Granted permissions:', JSON.stringify(grantedPermissions, (_, v) => typeof v === 'bigint' ? v.toString() : v, 2));
     }
 
-    const firstPermission = grantedPermissions[0];
-    if (!firstPermission) {
-      throw new Error('No permissions returned from wallet');
-    }
-
-    const permissionsContext = firstPermission.context as `0x${string}`;
-    const delegationManager = firstPermission.delegationManager as `0x${string}`;
-    if (!delegationManager) {
-      throw new Error('No delegationManager in granted permission');
-    }
+    const { permissionsContext, delegationManager } = validateGrantedPermissionShape(grantedPermissions);
 
     return {
       permissionsContext,
