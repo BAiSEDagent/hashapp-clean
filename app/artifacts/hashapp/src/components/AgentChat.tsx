@@ -11,6 +11,7 @@ const VENICE_BADGE_STYLE = {
 const UNREAD_DOT_STYLE = { background: '#7F77DD' } as const;
 const DEFAULT_SUBJECT = 'New conversation';
 const AGENT_LABEL = 'Agent';
+const ERROR_MESSAGE = 'Reasoning unavailable — check VENICE_API_KEY';
 
 function VeniceBadge({ label = 'Venice' }: { label?: string }) {
   return (
@@ -106,16 +107,11 @@ export function AgentChat() {
     setConfirmDeleteId(null);
   }, [deleteThread]);
 
-  const handleSend = useCallback(async () => {
-    if (!activeThreadId || isStreaming) return;
-    const content = inputValue.trim();
-    if (!content) return;
-
-    const currentThread = threads.find(thread => thread.id === activeThreadId);
-    if (!currentThread) return;
-
-    addMessage(activeThreadId, 'user', content);
-    setInputValue('');
+  const requestAssistant = useCallback(async (
+    threadId: string,
+    outboundMessages: Array<{ role: 'user' | 'assistant'; content: string }>,
+    onErrorOptions?: { retryable?: boolean },
+  ) => {
     setPendingAssistantText('');
     setIsStreaming(true);
 
@@ -124,10 +120,7 @@ export function AgentChat() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [
-            ...currentThread.messages.map(message => ({ role: message.role, content: message.content })),
-            { role: 'user', content },
-          ],
+          messages: outboundMessages,
           agentContext: {
             agentLabel: AGENT_LABEL,
             spendPermissions: spendPermissions
@@ -158,14 +151,45 @@ export function AgentChat() {
         setPendingAssistantText(fullText);
       }
 
-      addMessage(activeThreadId, 'assistant', fullText.trim() || '[empty response]');
+      addMessage(threadId, 'assistant', fullText.trim() || '[empty response]');
     } catch {
-      addMessage(activeThreadId, 'assistant', 'Reasoning unavailable — check VENICE_API_KEY');
+      addMessage(threadId, 'assistant', ERROR_MESSAGE, { retryable: onErrorOptions?.retryable ?? false });
     } finally {
       setPendingAssistantText('');
       setIsStreaming(false);
     }
-  }, [activeThreadId, addMessage, feed, inputValue, isStreaming, rules, spendPermissions, threads]);
+  }, [addMessage, feed, rules, spendPermissions]);
+
+  const handleSend = useCallback(async () => {
+    if (!activeThreadId || isStreaming) return;
+    const content = inputValue.trim();
+    if (!content) return;
+
+    const currentThread = threads.find(thread => thread.id === activeThreadId);
+    if (!currentThread) return;
+
+    const nextMessages = [
+      ...currentThread.messages.map(message => ({ role: message.role, content: message.content } as const)),
+      { role: 'user' as const, content },
+    ];
+
+    addMessage(activeThreadId, 'user', content);
+    setInputValue('');
+    await requestAssistant(activeThreadId, nextMessages, { retryable: true });
+  }, [activeThreadId, addMessage, inputValue, isStreaming, requestAssistant, threads]);
+
+  const handleRetry = useCallback(async (messageId: string) => {
+    if (!activeThread || isStreaming) return;
+    const messageIndex = activeThread.messages.findIndex(message => message.id === messageId);
+    if (messageIndex === -1) return;
+
+    const baseMessages = activeThread.messages.slice(0, messageIndex);
+    const lastUserMessage = [...baseMessages].reverse().find(message => message.role === 'user');
+    if (!lastUserMessage) return;
+
+    const outboundMessages = baseMessages.map(message => ({ role: message.role, content: message.content } as const));
+    await requestAssistant(activeThread.id, outboundMessages, { retryable: true });
+  }, [activeThread, isStreaming, requestAssistant]);
 
   if (!expanded && !activeThread) {
     return (
@@ -298,12 +322,23 @@ export function AgentChat() {
                 {message.content}
               </div>
               {message.role === 'assistant' && (
-                <span
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[7px] font-semibold uppercase tracking-wider mt-1 self-start"
-                  style={{ background: 'rgba(100,80,255,0.10)', border: '0.5px solid rgba(100,80,255,0.25)', color: '#AFA9EC' }}
-                >
-                  Private · Venice
-                </span>
+                <>
+                  <span
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[7px] font-semibold uppercase tracking-wider mt-1 self-start"
+                    style={{ background: 'rgba(100,80,255,0.10)', border: '0.5px solid rgba(100,80,255,0.25)', color: '#AFA9EC' }}
+                  >
+                    Private · Venice
+                  </span>
+                  {message.retryable && message.content === ERROR_MESSAGE && (
+                    <button
+                      onClick={() => void handleRetry(message.id)}
+                      disabled={isStreaming}
+                      className="mt-1 self-start text-[10px] font-medium text-primary/80 hover:text-primary transition-colors disabled:opacity-40"
+                    >
+                      Retry
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>

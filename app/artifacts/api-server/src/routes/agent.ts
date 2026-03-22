@@ -4,8 +4,52 @@ const router = Router();
 
 const MAX_MESSAGES = 20;
 const MAX_CONTENT_LENGTH = 500;
+const MAX_REQUEST_BYTES = 12_000;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 10;
+
+const requestBuckets = new Map<string, number[]>();
+
+function getClientIp(req: { ip?: string | undefined; headers: { [key: string]: string | string[] | undefined } }) {
+  const forwarded = req.headers['x-forwarded-for'];
+  const forwardedIp = Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(',')[0];
+  return (forwardedIp || req.ip || 'unknown').trim();
+}
+
+function isRateLimited(ip: string, now: number) {
+  const windowStart = now - RATE_LIMIT_WINDOW_MS;
+  const recent = (requestBuckets.get(ip) ?? []).filter(ts => ts > windowStart);
+  if (recent.length >= RATE_LIMIT_MAX_REQUESTS) {
+    requestBuckets.set(ip, recent);
+    return true;
+  }
+  recent.push(now);
+  requestBuckets.set(ip, recent);
+  return false;
+}
 
 router.post("/agent/chat", async (req, res) => {
+  const clientIp = getClientIp(req);
+  const now = Date.now();
+
+  for (const [ip, timestamps] of requestBuckets.entries()) {
+    const recent = timestamps.filter(ts => ts > now - RATE_LIMIT_WINDOW_MS);
+    if (recent.length === 0) {
+      requestBuckets.delete(ip);
+    } else if (recent.length !== timestamps.length) {
+      requestBuckets.set(ip, recent);
+    }
+  }
+
+  if (isRateLimited(clientIp, now)) {
+    return res.status(429).json({ error: 'Too many chat requests' });
+  }
+
+  const requestBytes = Buffer.byteLength(JSON.stringify(req.body ?? {}), 'utf8');
+  if (requestBytes > MAX_REQUEST_BYTES) {
+    return res.status(413).json({ error: 'chat request too large' });
+  }
+
   const apiKey = process.env.VENICE_API_KEY;
   if (!apiKey) {
     return res.status(500).json({ error: "VENICE_API_KEY not set" });
@@ -14,6 +58,9 @@ router.post("/agent/chat", async (req, res) => {
   const rawMessages = Array.isArray(req.body?.messages) ? req.body.messages : null;
   if (!rawMessages) {
     return res.status(400).json({ error: "messages array is required" });
+  }
+  if (rawMessages.length > MAX_MESSAGES) {
+    return res.status(400).json({ error: `messages array exceeds max length of ${MAX_MESSAGES}` });
   }
 
   const messages = rawMessages
@@ -143,8 +190,8 @@ router.post("/agent/chat", async (req, res) => {
             partialContent += delta;
             res.write(delta);
           }
-        } catch {
-          // ignore malformed SSE payloads
+        } catch (error) {
+          console.debug('[agent-chat] malformed Venice stream chunk', { clientIp, error });
         }
       }
     }
@@ -159,8 +206,8 @@ router.post("/agent/chat", async (req, res) => {
             partialContent += delta;
             res.write(delta);
           }
-        } catch {
-          // ignore trailing malformed payload
+        } catch (error) {
+          console.debug('[agent-chat] malformed trailing Venice stream chunk', { clientIp, error });
         }
       }
     }

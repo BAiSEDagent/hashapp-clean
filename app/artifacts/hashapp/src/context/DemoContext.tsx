@@ -58,6 +58,7 @@ export interface Message {
   content: string;
   ts: number;
   read: boolean;
+  retryable?: boolean;
 }
 
 export interface Thread {
@@ -79,7 +80,7 @@ interface DemoState {
   setAgentAvatarUrl: (url: string | null) => void;
   setActiveThreadId: (id: string | null) => void;
   addThread: (subject: string) => Thread;
-  addMessage: (threadId: string, role: 'user' | 'assistant', content: string) => void;
+  addMessage: (threadId: string, role: 'user' | 'assistant', content: string, options?: { retryable?: boolean }) => void;
   markThreadRead: (threadId: string) => void;
   linkThreadToTx: (threadId: string, txHash: `0x${string}`) => void;
   deleteThread: (threadId: string) => void;
@@ -92,7 +93,7 @@ interface DemoState {
   declinePending: (id: string) => void;
   toggleRule: (id: string) => void;
   resetDemo: () => void;
-  recordExecutedSpend: (permissionId: string, amount: number, txHash: `0x${string}`) => void;
+  recordExecutedSpend: (permissionId: string, amount: number, txHash: `0x${string}`, threadId?: string) => void;
 }
 
 const INITIAL_FEED: FeedItem[] = [
@@ -387,7 +388,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
 
   const addThread = useCallback((subject: string): Thread => {
     const thread: Thread = {
-      id: `thread-${Date.now()}`,
+      id: crypto.randomUUID(),
       subject,
       createdAt: Date.now(),
       messages: [],
@@ -396,7 +397,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     return thread;
   }, []);
 
-  const addMessage = useCallback((threadId: string, role: 'user' | 'assistant', content: string) => {
+  const addMessage = useCallback((threadId: string, role: 'user' | 'assistant', content: string, options?: { retryable?: boolean }) => {
     setThreads(prev => prev.map(thread =>
       thread.id === threadId
         ? {
@@ -404,11 +405,12 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
             messages: [
               ...thread.messages,
               {
-                id: `msg-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+                id: crypto.randomUUID(),
                 role,
                 content,
                 ts: Date.now(),
                 read: role === 'user',
+                retryable: options?.retryable,
               },
             ],
           }
@@ -454,7 +456,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     setActiveThreadId(null);
   }, []);
 
-  const recordExecutedSpend = useCallback((permissionId: string, amount: number, txHash: `0x${string}`) => {
+  const recordExecutedSpend = useCallback((permissionId: string, amount: number, txHash: `0x${string}`, threadId?: string) => {
     const permission = spendPermissions.find((p) => p.id === permissionId);
     if (!permission) return;
 
@@ -483,10 +485,10 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     };
 
     setFeed(prev => [spendItem, ...prev]);
-    if (activeThreadId) {
-      linkThreadToTx(activeThreadId, txHash);
+    if (threadId) {
+      linkThreadToTx(threadId, txHash);
     }
-  }, [activeThreadId, linkThreadToTx, spendPermissions]);
+  }, [linkThreadToTx, spendPermissions]);
 
   return (
     <DemoContext.Provider value={{
