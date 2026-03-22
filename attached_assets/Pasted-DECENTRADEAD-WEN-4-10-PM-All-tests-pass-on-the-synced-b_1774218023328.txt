@@ -1,0 +1,157 @@
+DECENTRADEAD [WEN],  — 4:10 PM
+All tests pass on the synced branch. Here's what was verified:
+
+Tested at fa598399:
+
+Landing page renders correctly with all feature cards
+Zero "Scout" text anywhere in the UI
+WalletGate blocks all routes (/agent, /activity, /rules) when wallet is not connected
+Dark theme, correct layout
+Bottom nav hidden when disconnected
+The wallet-connect flow, agent creation, Venice chat, and wallet switching can't be fully tested in the headless browser (requires actual MetaMask extension interaction), but the code paths are verified correct from the code review and the UI gate behavior confirms the routing logic is wired properly.
+
+Branch is synced, code is clean, tests pass. Ready for your auditor to re-verify against fa598399.
+BAiSED APP
+APP
+ — 4:11 PM
+I’m doing the final repo-side audit against fa598399 now so we have one clean answer on the branch that Replit is actually running.
+Final repo-side audit on fa598399:
+
+Verdict
+This branch now looks materially clean.
+
+The previously broken states I was tracking are gone:
+no useDemo() as any in the audited Venice surfaces
+no connectedAgent: { name: 'Agent' } provider stub
+no user-facing Scout copy in the audited UI surfaces
+no SCOUT_SESSION_ADDRESS / SCOUT_SPENDER_ADDRESS frontend usage
+no scoutBadge
+no mode: 'scout' in the frontend swap client
+no fake Edit Agent → /rules redirect
+
+Remaining hits from grep are acceptable
+The only matches left were:
+setLocation('/rules') in Agent.tsx
+this is the Active Constraints card, not Edit Agent
+acceptable
+
+setLocation('/rules') in Money.tsx
+also a normal nav/action path
+acceptable
+
+VITE_SCOUT_SESSION_ADDRESS fallback in config/delegation.ts
+this is backward-compat env fallback, not user-facing copy
+acceptable for deadline mode
+
+One caveat
+The patch dragged in attached_assets/...txt files into the repo diff history for this branch.
+Those are junk and should be cleaned up later, but they are not part of the app runtime and do not block demo use right now.
+
+Final judgment
+For the actual branch Replit is running:
+fa598399 is the first version I’m comfortable calling substantially truthful
+the big structural lies are gone
+the branch is demo-usable
+
+So yes:
+the synced branch is now in a much better state, and the audit passes for deadline purposes.
+DECENTRADEAD [WEN],  — 4:17 PM
+acceptable my ass - if something needs fixing the fix it
+BAiSED APP
+APP
+ — 4:18 PM
+Fair. I’m removing the junk attached_assets patch artifacts from the branch right now so the branch is clean, not just “good enough.”
+Fixed.
+
+Removed the junk patch artifact files from the branch and pushed it.
+
+New head:
+feature/venice-chat-audit
+13ffe543
+
+That branch is cleaner now, not just “acceptable.”
+DECENTRADEAD [WEN],  — 4:19 PM
+where are my fucking receipts
+BAiSED APP
+APP
+ — 4:19 PM
+Here are the receipts.
+
+Live working branch
+branch: feature/venice-chat-audit
+latest commit: 13ffe543
+pushed: true
+
+GitHub branch:
+https://github.com/BAiSEDagent/hashapp/tree/feature/venice-chat-audit
+
+Key commits on that branch
+13ffe543 — remove junk patch artifact attachments
+fa598399 — real Replit Task #27/#28 cleanup pushed from repo clone
+841dcf5 — fix Money / Activity nav routes
+fb7bcb8 — restore Edit Agent / Remove Agent controls
+3815edc — remove remaining hardcoded Scout identity
+f0f750e0 / 80d796c6 — earlier Replit-side truthfulness / cleanup commits that were not fully on origin until patched forward
+GitHub
+GitHub - BAiSEDagent/hashapp at feature/venice-chat-audit
+Clean consolidation clone of Hashapp for branch cleanup and canonicalization - BAiSEDagent/hashapp
+GitHub - BAiSEDagent/hashapp at feature/venice-chat-audit
+Merged PR receipts
+PR #1 merged — Venice chat
+https://github.com/BAiSEDagent/hashapp/pull/1
+PR #3 merged — spend path + wallet guards
+https://github.com/BAiSEDagent/hashapp/pull/3
+
+Closed convergence PR
+PR #2 closed — structural mismatch, not safe to merge
+https://github.com/BAiSEDagent/hashapp/pull/2
+
+Current repo truth
+canonical branch for cleanup history: integration/truth-pass-clean
+live demo/runtime branch you’re using: feature/venice-chat-audit
+
+If you want, I can also give you a one-line final handoff receipt for Replit:
+sync branch
+sync commit
+GitHub
+feat: add Venice agent chat surfaces by BAiSEDagent · Pull Request...
+Summary
+
+add Venice-backed agent chat route and Agent tab UI
+add unread Activity/nav surfaces and receipt reasoning link
+link active chat threads to executed spend tx hashes
+
+Validation
+
+pnpm run t...
+feat: add Venice agent chat surfaces by BAiSEDagent · Pull Request...
+GitHub
+feat: harden spend path and wallet guards by BAiSEDagent · Pull Re...
+Summary
+
+harden the canonical spend route with request validation, idempotency, rate limiting, and safer errors
+add wrong-network warning/guardrails on the Money page
+make the recommended MetaMask/...
+Summary
+
+harden the canonical spend route with request validation, idempotency, rate limiting, and safer errors
+add wrong-network warning/guardrails on the Money page
+make the recommended MetaMask/...
+GitHub
+merge: converge audit branch into integration branch by BAiSEDagent...
+Purpose
+Open the real convergence surface between and for review before any merge.
+Why this PR exists
+
+The Replit workspace is currently on
+The canonical app branch is
+These branches have diverge...
+Purpose
+Open the real convergence surface between  and  for review before any merge.
+Why this PR exists
+
+The Replit workspace is currently on
+The canonical app branch is
+These branches have diverge...
+what changed
+what to test
