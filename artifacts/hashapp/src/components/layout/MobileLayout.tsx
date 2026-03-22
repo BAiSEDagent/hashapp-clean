@@ -2,9 +2,10 @@ import { Link, useLocation } from 'wouter';
 import { Activity, Bot, ShieldCheck, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDemo } from '@/context/DemoContext';
+import { AgentAvatar } from '@/components/AgentAvatar';
 
 export function MobileLayout({ children }: { children: React.ReactNode }) {
-  const { threads } = useDemo();
+  const { threads, connectedAgent } = useDemo();
   const hasUnread = threads.some(t =>
     t.messages.some(m => m.role === 'assistant' && !m.read)
   );
@@ -19,6 +20,15 @@ export function MobileLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[#000000] w-full flex justify-center text-foreground font-sans">
       <div className="w-full max-w-[430px] bg-background min-h-screen relative flex flex-col shadow-2xl border-x border-white/[0.04]">
+        {connectedAgent && (
+          <div className="absolute top-12 right-6 z-20">
+            <div className="relative">
+              <AgentAvatar size="sm" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background" />
+            </div>
+          </div>
+        )}
+
         <main className="flex-1 overflow-y-auto pb-24 scroll-smooth">
           {children}
         </main>

@@ -10,7 +10,6 @@ import { requestDelegatedPermission } from '@/lib/metamaskPermissions';
 import { registerDelegation } from '@/lib/delegationAuth';
 import { useDemo, type FeedItem, type StatusType, type Thread } from '@/context/DemoContext';
 import { AvatarIcon } from '@/components/ui/AvatarIcon';
-import { AgentAvatar } from '@/components/AgentAvatar';
 import { TruthBadge } from '@/components/TruthBadge';
 import {
   SPEND_PERMISSION_MANAGER_ADDRESS,
@@ -47,15 +46,9 @@ export default function Activity() {
 
   return (
     <div className="flex flex-col min-h-full">
-      <header className="px-6 pt-12 pb-5 flex items-center justify-between sticky top-0 bg-background/95 backdrop-blur-xl z-10">
-        <div>
-          <h1 className="text-[28px] font-bold tracking-tight">Activity</h1>
-          <p className="text-[11px] text-muted-foreground/50 mt-0.5">Connected activity feed</p>
-        </div>
-        <div className="relative">
-          <AgentAvatar size="sm" />
-          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background" />
-        </div>
+      <header className="px-6 pt-12 pb-5 sticky top-0 bg-background/95 backdrop-blur-xl z-10">
+        <h1 className="text-[28px] font-bold tracking-tight">Activity</h1>
+        <p className="text-[11px] text-muted-foreground/50 mt-0.5">Connected activity feed</p>
       </header>
 
       <div className="mb-6 pt-1">

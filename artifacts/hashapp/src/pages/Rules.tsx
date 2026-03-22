@@ -19,7 +19,7 @@ export default function Rules() {
   return (
     <div className="flex flex-col min-h-full pb-8">
       <header className="px-6 pt-12 pb-5 sticky top-0 bg-background/95 backdrop-blur-xl z-10">
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2.5 mb-1">
           <h1 className="text-[28px] font-bold tracking-tight">Rules</h1>
           <div className="px-2.5 py-1 rounded-lg bg-primary/8 border border-primary/10">
             <span className="text-[10px] font-semibold text-primary tabular-nums tracking-wide">{activeCount} active</span>
