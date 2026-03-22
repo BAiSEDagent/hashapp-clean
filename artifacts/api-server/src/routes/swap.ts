@@ -104,7 +104,7 @@ swapRouter.post('/swap/execute', async (req, res) => {
       return;
     }
 
-    if (mode === 'agent') {
+    if (mode === 'agent' || mode === 'scout') {
       if (!requireAgentAuth(req.headers.authorization)) {
         res.status(401).json({ error: 'Unauthorized: valid AGENT_API_TOKEN required for agent mode' });
         return;
