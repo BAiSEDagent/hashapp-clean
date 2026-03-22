@@ -1,5 +1,5 @@
-import { useRoute, Link } from 'wouter';
-import { X, ExternalLink } from 'lucide-react';
+import { useRoute, Link, useLocation } from 'wouter';
+import { X, ExternalLink, MessageCircle, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTransactionReceipt, useBlock, useReadContract } from 'wagmi';
 import { useDemo } from '@/context/DemoContext';
@@ -13,7 +13,8 @@ import { TruthBadge } from '@/components/TruthBadge';
 
 export default function Receipt() {
   const [, params] = useRoute('/receipt/:id');
-  const { feed, spendPermissions } = useDemo();
+  const [, setLocation] = useLocation();
+  const { feed, spendPermissions, threads, setActiveThreadId } = useDemo();
   
   const item = feed.find(f => f.id === params?.id);
 
@@ -32,6 +33,7 @@ export default function Receipt() {
   });
 
   const linkedPerm = item ? spendPermissions.find(p => p.txHash && p.txHash === item.txHash) : undefined;
+  const linkedThread = item?.txHash ? threads.find(thread => thread.txHash === item.txHash) : undefined;
   const permStruct = linkedPerm?.permissionStruct;
 
   const { data: isApprovedLive } = useReadContract({
@@ -173,6 +175,33 @@ export default function Receipt() {
               </>
             )}
           </div>
+
+          {linkedThread && item.txHash && (
+            <button
+              onClick={() => {
+                setActiveThreadId(linkedThread.id);
+                setLocation('/agent');
+              }}
+              className="w-full mt-3 rounded-2xl border border-[#7F77DD]/20 bg-[#7F77DD]/[0.07] px-4 py-3 text-left hover:bg-[#7F77DD]/[0.1] transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-[#7F77DD]/15 border border-[#7F77DD]/20 flex items-center justify-center shrink-0">
+                  <MessageCircle size={14} className="text-[#AFA9EC]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-semibold text-foreground">View reasoning</span>
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase tracking-wider shrink-0 border border-[#7F77DD]/30 bg-[#7F77DD]/15 text-[#AFA9EC]">
+                      <span className="w-1 h-1 rounded-full bg-[#7F77DD]" />
+                      Venice
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground/55 mt-0.5">{linkedThread.messages.length} messages</p>
+                </div>
+                <ChevronRight size={14} className="text-muted-foreground/30 shrink-0" />
+              </div>
+            </button>
+          )}
         </div>
       </div>
     </motion.div>

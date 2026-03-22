@@ -247,7 +247,7 @@ function SpendPermissionRow({
   onSpendExecuted,
 }: {
   permission: SpendPermission;
-  onSpendExecuted: (permissionId: string, amount: number, txHash: `0x${string}`) => void;
+  onSpendExecuted: (permissionId: string, amount: number, txHash: `0x${string}`, threadId?: string) => void;
 }) {
   const cadenceLabel = { daily: '/day', weekly: '/wk', monthly: '/mo' };
   const permStruct = permission.permissionStruct;
