@@ -1,0 +1,258 @@
+I’m doing the narrow MetaMask Smart Accounts Kit audit now against the current repo state and the latest doc dump, then I’ll give you only mismatches worth acting on.
+I did the narrow audit against the current repo and the MetaMask Smart Accounts Kit doc surface.
+
+Verdict
+The integration is good enough for the demo.
+There are no must-fix SDK mismatches blocking submission right now.
+
+What remains are a few cleanup / hardening items, not a broken integration.
+
+---
+
+What matches well
+Frontend permission request
+Current file:
+artifacts/hashapp/src/lib/metamaskPermissions.ts
+
+This is broadly aligned with the Smart Accounts Kit direction:
+createWalletClient(...).extend(erc7715ProviderActions())
+requestExecutionPermissions(...)
+periodic ERC-20 permission shape
+explicit chainId, expiry, permission.type, periodAmount, periodDuration
+
+That is the right surface.
+
+Backend redemption
+Current file:
+artifacts/api-server/src/routes/delegation.ts
+
+This is also directionally correct:
+session wallet via privateKeyToAccount
+wallet client extended with erc7710WalletActions()
+sendTransactionWithDelegation(...)
+ERC-20 transfer calldata
+server-side delegated execution
+That is the real proof loop.
+
+SDK version
+You are on:
+@metamask/smart-accounts-kit@0.4.0-beta.1
+
+That matches the version we intentionally aligned to earlier.
+
+---
+
+What I would classify as must keep, not change
+Do not do a broad SDK refactor now.
+The current demo loop is already working:
+grant
+active delegation
+allowed spend
+blocked spend
+receipt/history
+
+That matters more than theoretical SDK prettiness.
+
+---
+
+Actual mismatches / issues I found
+Frontend type assumptions are still a little brittle
+In metamaskPermissions.ts you extract:
+
+firstPermission.context
+firstPermission.delegationManager
+
+with manual casts.
+
+Risk
+If MetaMask slightly changes the granted permission object shape, this code breaks at runtime more easily than it should.
+
+Severity
+Low for demo
+Because it is already working in your live tested flow.
+
+Recommendation
+Do not refactor now unless it breaks.
+After hackathon, wrap the granted permission shape in a runtime parser/validator.
+
+---
+
+Permission request still uses DELEGATION_RECIPIENT_ADDRESS as to
+That file currently builds the permission request with:
+to: DELEGATION_RECIPIENT_ADDRESS
+
+And DELEGATION_RECIPIENT_ADDRESS is derived from:
+VITE_SCOUT_SESSION_ADDRESS
+
+Why this is a little weird
+Naming-wise, this is confusing.
+The permission “to” field and the server-side session account name are semantically muddled.
+
+Severity
+Medium naming clarity
+Low runtime risk, since the working loop is proving the flow.
+
+Recommendation
+Not worth renaming now unless it causes visible confusion.
+Just remember this is naming debt.
+
+---
+
+Blocked spend proof is still app-normalized
+In backend /delegation/spend, all reverts collapse to:
+Transaction reverted onchain
+
+Then frontend maps that to:
+Blocked by delegated spend limit
+
+Why this matters
+This is good product copy, but it is not rich proof.
+You are losing the underlying revert specificity unless it’s visible elsewhere.
+
+Severity
+Medium
+This is the biggest thing I would still tighten if you want more judge-proof density.
+
+Recommendation
+Best next technical improvement:
+surface the raw mapped rejection code from backend when available, e.g.:
+ExceededSpendPermission
+AfterSpendPermissionEnd
+InvalidSender
+
+Then present cleaner UI text while preserving the exact technical reason in receipt/proof detail.
+
+That would materially improve Track 1 credibility.
+
+---
+
+Idempotency/rate-limit logic is still not truly atomic
+This remains in artifacts/api-server/src/routes/delegation.ts.
+
+You still have:
+read-then-write idempotency
+read/update rate limit
+idempotency recorded after tx success
+Severity
+Real backend hardening issue
+But not the next thing to touch before submission unless you expect heavy concurrency.
+
+Recommendation
+Leave it for post-hackathon unless you have time for a clean transactional pass.
+This is infrastructure-grade correctness, not demo-grade unblocker.
+
+---
+
+DELEGATION_AUTH_SECRET fallback still exists in non-prod
+getHmacSecret() still falls back to deriving from SCOUT_PRIVATE_KEY outside production.
+
+Severity
+Fine for demo
+Not fine as long-term production posture
+Recommendation
+No action now if the deployed environment is already using a proper dedicated secret.
+
+---
+
+What I would do next, ranked
+Highest-value next MetaMask-related fix
+Improve blocked-proof density
+Not SDK refactor.
+Not connector churn.
+
+Specifically:
+keep UI copy: Blocked by delegated spend limit
+but include technical proof detail in receipt / proof docs:
+raw mapped error code
+permission context
+delegated authority reference
+exact reason
+
+That gets you more Track 1 points than any SDK cleanup.
+
+Second
+Add a tiny runtime guard around granted permission shape
+Only if you want one small safety patch:
+validate context
+validate delegationManager
+fail with explicit message if missing
+
+This is a small robustness improvement.
+
+Third
+Leave the rest alone
+Do not spend submission time reworking:
+7715 request shape
+7710 execution wiring
+connector architecture
+session account naming debt
+
+unless a real bug appears.
+
+---
+
+Bottom line
+Staff answer
+Your MetaMask Smart Accounts Kit integration is not the weak link right now.
+
+Good enough today
+permission grant path
+delegated execution path
+current SDK version
+demo loop
+
+Still worth tightening
+blocked-proof specificity
+runtime validation of granted permission object
+naming clarity later
+
+If you want the best next move from this audit:
+improve blocked-proof detail, not the SDK wiring.
+DECENTRADEAD [WEN],  — 8:49 PM
+use ethskills and smart-accounts-kit skills fix everything you just mentioned. one at a time
+BAiSED APP
+APP
+ — 8:53 PM
+Starting with the highest-value fix from that audit: blocked-proof specificity. I’m not touching the rest yet. First pass is: preserve the exact backend rejection code, surface it in the feed/receipt, and keep the cleaner human-facing copy on top.
+Diagnosis: blocked receipts still collapse to a friendly summary without preserving the exact technical rejection reason.
+Fix: keep the clean UI label, but store and surface the backend rejection code/details in the feed + receipt for blocked delegated spends.
+Verification: after sync, a blocked delegated receipt should still say Blocked by delegated spend limit at the top, and also show the exact technical reason/code in the detail rows.
+I found the exact gap: backend collapses specific delegated-spend reverts into one generic string, and the frontend throws away whatever specificity remains. I’m fixing only that now — preserve the exact code/detail, keep the friendly label on top, and expose the technical reason in Receipt.
+Now wiring backend error detail and receipt surfacing.
+The frontend half is patched. I hit exact-text drift in the backend and receipt files, so I’m reading the live snippets and patching those precisely rather than guessing.
+I have the exact live shapes now. I’m patching the backend catch path and the blocked receipt detail row precisely — no more guessing.
+Applying the precise patch now: map known MetaMask delegation revert reasons in the backend and surface them in blocked receipts as a separate technical-reason row.
+Audit gate for this fix only: blocked-proof specificity, nothing else.
+The fix is committed and the gate passed. Push was only blocked by the branch moving again, so I’m rebasing this exact change on top and pushing cleanly — no extra edits.
+Done.
+
+Receipt
+branch: audit/integrate-truth-pass-clean
+commit: 76e01937
+pushed: true
+
+Fix 1 complete: blocked-proof specificity
+What changed
+backend now preserves exact delegated-spend rejection detail when it can map it:
+ExceededSpendPermission
+AfterSpendPermissionEnd
+InvalidSender
+frontend still shows the clean human label:
+Blocked by delegated spend limit
+blocked receipts now also show:
+Technical reason
+when the backend preserved a distinct code/detail
+
+Files changed
+artifacts/api-server/src/routes/delegation.ts
+artifacts/hashapp/src/context/DemoContext.tsx
+artifacts/hashapp/src/pages/Activity.tsx
+artifacts/hashapp/src/pages/Receipt.tsx
+
+Verification
+typecheck passed
+frontend build passed
+
+After sync, a blocked delegated-spend receipt should show:
+friendly top-line blocked wording
+plus the exact technical reason/code when available
