@@ -62,11 +62,9 @@ export default function Money() {
   return (
     <div className="flex flex-col min-h-full pb-8">
       <header className="px-6 pt-12 pb-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-[28px] font-bold tracking-tight">Money</h1>
-            <p className="text-[11px] text-muted-foreground/50 mt-0.5">Your wallet · {agentName}'s allocation</p>
-          </div>
+        <h1 className="text-[28px] font-bold tracking-tight">Money</h1>
+        <div className="flex items-center justify-between mt-0.5">
+          <p className="text-[11px] text-muted-foreground/50">Your wallet · {agentName}'s allocation</p>
           <WalletAddressChip />
         </div>
       </header>
