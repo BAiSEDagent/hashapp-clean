@@ -25,7 +25,7 @@ const TRUSTED_DESTINATIONS = [
 ];
 
 export default function Activity() {
-  const { feed, approvePending, declinePending } = useDemo();
+  const { feed, approvePending, declinePending, threads, setActiveThreadId, markThreadRead } = useDemo();
   const [, setLocation] = useLocation();
 
   const groupedFeed = feed.reduce((acc, item) => {
@@ -33,6 +33,13 @@ export default function Activity() {
     acc[item.dateGroup].push(item);
     return acc;
   }, {} as Record<string, FeedItem[]>);
+
+  const firstUnreadThread = threads.find(thread =>
+    thread.messages.some(message => message.role === 'assistant' && !message.read),
+  );
+  const lastUnreadMessage = firstUnreadThread
+    ? firstUnreadThread.messages.filter(message => message.role === 'assistant' && !message.read).at(-1)
+    : undefined;
 
   return (
     <div className="flex flex-col min-h-full">
@@ -72,6 +79,34 @@ export default function Activity() {
       </div>
 
       <div className="px-5 pb-8 flex flex-col gap-8">
+        {firstUnreadThread && lastUnreadMessage && (
+          <button
+            onClick={() => {
+              setActiveThreadId(firstUnreadThread.id);
+              markThreadRead(firstUnreadThread.id);
+              setLocation('/agent');
+            }}
+            className="flex items-center gap-3 rounded-2xl border border-[#7F77DD]/20 bg-[#7F77DD]/[0.07] px-4 py-3 text-left hover:bg-[#7F77DD]/[0.1] transition-colors"
+          >
+            <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-[11px] font-semibold shrink-0">
+              A
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-[12px] font-semibold text-foreground truncate">The agent wants to discuss a purchase</span>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase tracking-wider shrink-0 border border-[#7F77DD]/30 bg-[#7F77DD]/15 text-[#AFA9EC]">
+                  <span className="w-1 h-1 rounded-full bg-[#7F77DD]" />
+                  Venice
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground/60 truncate">
+                {lastUnreadMessage.content.slice(0, 40)}{lastUnreadMessage.content.length > 40 ? '…' : ''}
+              </p>
+            </div>
+            <span className="text-[9px] text-muted-foreground/35 shrink-0">{new Date(lastUnreadMessage.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
+          </button>
+        )}
+
         {Object.entries(groupedFeed).map(([dateGroup, items]) => (
           <div key={dateGroup} className="flex flex-col">
             <h2 className="text-[10px] font-semibold text-muted-foreground/35 uppercase tracking-[0.2em] pl-1 mb-2">

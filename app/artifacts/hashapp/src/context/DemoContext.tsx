@@ -52,13 +52,37 @@ export interface Rule {
   enabled: boolean;
 }
 
+export interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  ts: number;
+  read: boolean;
+}
+
+export interface Thread {
+  id: string;
+  subject: string;
+  txHash?: `0x${string}`;
+  createdAt: number;
+  messages: Message[];
+}
+
 interface DemoState {
   feed: FeedItem[];
   rules: Rule[];
   spendPermissions: SpendPermission[];
   stage: 'INITIAL' | 'PENDING_ADDED' | 'APPROVED' | 'RULE_DISABLED' | 'BLOCKED_ADDED';
+  threads: Thread[];
+  activeThreadId: string | null;
   agentAvatarUrl: string | null;
   setAgentAvatarUrl: (url: string | null) => void;
+  setActiveThreadId: (id: string | null) => void;
+  addThread: (subject: string) => Thread;
+  addMessage: (threadId: string, role: 'user' | 'assistant', content: string) => void;
+  markThreadRead: (threadId: string) => void;
+  linkThreadToTx: (threadId: string, txHash: `0x${string}`) => void;
+  deleteThread: (threadId: string) => void;
   approvePending: (
     id: string,
     realTxHash?: string,
@@ -175,6 +199,23 @@ const INITIAL_RULES: Rule[] = [
   { id: 'r5', name: 'New vendor approval', description: 'Require your approval before paying a new vendor', enabled: true },
 ];
 
+const SEED_THREADS: Thread[] = [
+  {
+    id: 'demo-thread-1',
+    subject: 'DataStream Pro purchase',
+    createdAt: Date.now() - 120000,
+    messages: [
+      {
+        id: 'demo-m1',
+        role: 'assistant',
+        content: "I'm tracking DataStream Pro — $5/session, within your daily cap. Ready when you are.",
+        ts: Date.now() - 120000,
+        read: false,
+      },
+    ],
+  },
+];
+
 const STORAGE_KEY = 'hashapp_demo_state';
 const AVATAR_STORAGE_KEY = 'hashapp_agent_avatar';
 
@@ -183,13 +224,24 @@ function loadPersistedState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed.version === 3) return parsed;
+      if (parsed.version === 3) {
+        if (parsed.threads === undefined) {
+          parsed.threads = SEED_THREADS;
+        }
+        return parsed;
+      }
     }
   } catch {}
   return null;
 }
 
-function persistState(feed: FeedItem[], rules: Rule[], spendPermissions: SpendPermission[], stage: DemoState['stage']) {
+function persistState(
+  feed: FeedItem[],
+  rules: Rule[],
+  spendPermissions: SpendPermission[],
+  stage: DemoState['stage'],
+  threads: Thread[],
+) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       version: 3,
@@ -197,6 +249,7 @@ function persistState(feed: FeedItem[], rules: Rule[], spendPermissions: SpendPe
       rules,
       spendPermissions,
       stage,
+      threads,
     }));
   } catch {}
 }
@@ -209,6 +262,8 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   const [rules, setRules] = useState<Rule[]>(persisted?.rules ?? INITIAL_RULES);
   const [spendPermissions, setSpendPermissions] = useState<SpendPermission[]>(persisted?.spendPermissions ?? INITIAL_SPEND_PERMISSIONS);
   const [stage, setStage] = useState<DemoState['stage']>(persisted?.stage ?? 'INITIAL');
+  const [threads, setThreads] = useState<Thread[]>(persisted?.threads ?? SEED_THREADS);
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
 
   const [agentAvatarUrl, setAgentAvatarUrlState] = useState<string | null>(() => {
     try {
@@ -230,8 +285,8 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    persistState(feed, rules, spendPermissions, stage);
-  }, [feed, rules, spendPermissions, stage]);
+    persistState(feed, rules, spendPermissions, stage, threads);
+  }, [feed, rules, spendPermissions, stage, threads]);
 
   useEffect(() => {
     if (stage !== 'INITIAL') return;
@@ -330,12 +385,73 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     }
   }, [stage]);
 
+  const addThread = useCallback((subject: string): Thread => {
+    const thread: Thread = {
+      id: `thread-${Date.now()}`,
+      subject,
+      createdAt: Date.now(),
+      messages: [],
+    };
+    setThreads(prev => [thread, ...prev]);
+    return thread;
+  }, []);
+
+  const addMessage = useCallback((threadId: string, role: 'user' | 'assistant', content: string) => {
+    setThreads(prev => prev.map(thread =>
+      thread.id === threadId
+        ? {
+            ...thread,
+            messages: [
+              ...thread.messages,
+              {
+                id: `msg-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+                role,
+                content,
+                ts: Date.now(),
+                read: role === 'user',
+              },
+            ],
+          }
+        : thread,
+    ));
+  }, []);
+
+  const markThreadRead = useCallback((threadId: string) => {
+    setThreads(prev => prev.map(thread =>
+      thread.id === threadId
+        ? {
+            ...thread,
+            messages: thread.messages.map(message =>
+              message.role === 'assistant' && !message.read
+                ? { ...message, read: true }
+                : message,
+            ),
+          }
+        : thread,
+    ));
+  }, []);
+
+  const linkThreadToTx = useCallback((threadId: string, txHash: `0x${string}`) => {
+    setThreads(prev => prev.map(thread =>
+      thread.id === threadId
+        ? { ...thread, txHash }
+        : thread,
+    ));
+  }, []);
+
+  const deleteThread = useCallback((threadId: string) => {
+    setThreads(prev => prev.filter(thread => thread.id !== threadId));
+    setActiveThreadId(prev => (prev === threadId ? null : prev));
+  }, []);
+
   const resetDemo = useCallback(() => {
     try { localStorage.removeItem(STORAGE_KEY); } catch {}
     setFeed(INITIAL_FEED);
     setRules(INITIAL_RULES);
     setSpendPermissions(INITIAL_SPEND_PERMISSIONS);
     setStage('INITIAL');
+    setThreads(SEED_THREADS);
+    setActiveThreadId(null);
   }, []);
 
   const recordExecutedSpend = useCallback((permissionId: string, amount: number, txHash: `0x${string}`) => {
@@ -367,10 +483,33 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     };
 
     setFeed(prev => [spendItem, ...prev]);
-  }, [spendPermissions]);
+    if (activeThreadId) {
+      linkThreadToTx(activeThreadId, txHash);
+    }
+  }, [activeThreadId, linkThreadToTx, spendPermissions]);
 
   return (
-    <DemoContext.Provider value={{ feed, rules, spendPermissions, stage, agentAvatarUrl, setAgentAvatarUrl, approvePending, declinePending, toggleRule, resetDemo, recordExecutedSpend }}>
+    <DemoContext.Provider value={{
+      feed,
+      rules,
+      spendPermissions,
+      stage,
+      threads,
+      activeThreadId,
+      agentAvatarUrl,
+      setAgentAvatarUrl,
+      setActiveThreadId,
+      addThread,
+      addMessage,
+      markThreadRead,
+      linkThreadToTx,
+      deleteThread,
+      approvePending,
+      declinePending,
+      toggleRule,
+      resetDemo,
+      recordExecutedSpend,
+    }}>
       {children}
     </DemoContext.Provider>
   );

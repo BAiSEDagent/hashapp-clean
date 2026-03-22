@@ -4,6 +4,7 @@ import { useAccount, useReadContract } from 'wagmi';
 import { useDemo } from '@/context/DemoContext';
 import { useLocation } from 'wouter';
 import { AgentAvatar } from '@/components/AgentAvatar';
+import { AgentChat } from '@/components/AgentChat';
 import { TruthBadge } from '@/components/TruthBadge';
 import {
   SCOUT_SPENDER_ADDRESS,
@@ -111,6 +112,8 @@ export default function Agent() {
             </div>
           </div>
         )}
+
+        <AgentChat />
 
         <div 
           onClick={() => setLocation('/rules')}
