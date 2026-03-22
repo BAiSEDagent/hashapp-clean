@@ -1,0 +1,104 @@
+DECENTRADEAD [WEN],  — 3:04 PM
+why the fuck is he still talking about scout. i thought we cleaned that out- Renaming:
+SCOUT_*
+scoutBadge
+mode: 'scout'
+BAiSED APP
+APP
+ — 3:05 PM
+Because it was not actually cleaned out.
+
+What got cleaned:
+some visible UI labels
+
+What did not get cleaned:
+internal constant names
+swap/delegation variable names
+some remaining user-facing feed/demo copy on the remote branch
+parts of the truthfulness pass that never fully landed
+
+So when Replit says:
+SCOUT_*
+scoutBadge
+mode: 'scout'
+
+that’s because those names are still in the codebase.
+The problem is not that Replit is hallucinating.
+The problem is that the cleanup was only partial.
+DECENTRADEAD [WEN],  — 3:05 PM
+i want all of this shit fixed. every thing is critical
+BAiSED APP
+APP
+ — 3:06 PM
+Good. Then treat all of it as critical.
+
+No more splitting it into “cleanup” vs “core.”
+
+The actual task now is:
+Full branch truthfulness + naming cleanup on feature/venice-chat-audit
+
+That means all of this in one pass:
+
+Real connected-agent state
+no stubbed { name: 'Agent' }
+nullable when no agent exists
+wallet-scoped persistence
+wallet A / wallet B / wallet A rehydration works
+
+Real remove-agent flow
+actually clears agent identity
+actually returns Agent page to onboarding state
+
+Always route to /agent on wallet connect
+new user → onboarding
+returning user → messages / agent page
+
+Fix Edit Agent for real
+inline edit flow or real modal
+no fake /rules redirect
+
+Remove every remaining Scout reference
+user-facing copy
+feed/demo state
+constants
+variable names
+nav vars
+swap mode string
+receipt copy
+agent page copy
+anything else in src/
+
+Remove as any from the affected surfaces
+Agent
+Activity
+AgentChat
+anything else touched by this flow
+
+Re-test the whole lifecycle
+connect wallet
+land on /agent
+create agent
+switch wallets
+rehydrate correctly
+remove agent
+return to onboarding
+send/stream Venice chat
+unread indicators
+receipt/activity still work
+
+So the instruction to Replit is:
+Treat every remaining Scout reference and every fake lifecycle state as critical.
+
+Do the full cleanup in one pass on feature/venice-chat-audit:
+- real connectedAgent
+- real remove/edit flows
+- always route to /agent after connect
+- wallet-scoped rehydration
+- zero remaining Scout references in src/
+- zero as any casts in the affected flow
+Do not break this into separate tasks.
+Push one branch update when the whole pass is done.
+Then give me the commit SHA for audit.
+
+
+That’s the right move now.

@@ -1,0 +1,90 @@
+BAiSED APP
+APP
+ — 2:51 PM
+I’ve got the SHA. I’m fetching feature/venice-chat-audit and auditing the actual diff from the last known good branch head, not the summary.
+I audited the actual code on origin, not the summary.
+
+Verdict
+The claimed fixes are not fully landed on the branch yet.
+
+I fetched:
+origin/feature/venice-chat-audit
+latest remote SHA: f0f750e0
+
+Some good fixes did land:
+WalletGate now routes to /agent on the false → true connect transition using wasConnected
+AgentChat now uses typed Thread and dynamic agent label/initial
+DemoContext has started moving toward wallet-scoped persistence (agentKey, avatarKey, loadConnectedAgent, persistConnectedAgent, walletRef)
+
+But the branch still fails the truthfulness pass
+connectedAgent is still hardcoded in the provider
+Remote branch still contains:
+
+connectedAgent: { name: 'Agent' }
+
+
+at the provider value.
+
+That means the most important fix is not complete.
+
+useDemo() as any is still present
+Still on the branch:
+artifacts/hashapp/src/pages/Agent.tsx
+artifacts/hashapp/src/pages/Activity.tsx
+artifacts/hashapp/src/components/AgentChat.tsx
+
+So the type-contract cleanup is not complete.
+User-facing Scout copy still exists
+Still present on the branch:
+
+Activity.tsx
+Scout wants delegated periodic USDC authority...
+Scout wants recurring access...
+
+Agent.tsx
+Scout can autonomously swap ETH → USDC...
+Scout auto-pay failed
+
+Receipt.tsx
+Redeems $5 USDC from the granted delegation via Scout session key
+
+DemoContext.tsx
+seeded/demo feed copy still full of Scout ...
+rules still include Prevent Scout from...
+generated intents still use Scout ...
+
+So the “zero Scout user-facing copy” claim is false on the remote branch.
+
+Edit Agent is still fake
+Still on the branch:
+
+onClick={() => setLocation('/rules')}
+
+
+So Edit Agent is still not a real edit flow.
+
+---
+
+Accurate audit result on f0f750e0
+Landed
+post-connect /agent routing looks correct
+some wallet-scoped persistence machinery exists
+some type cleanup landed
+dynamic agent label in chat landed
+
+NOT landed / still broken
+real nullable connectedAgent in provider
+full removal of as any
+removal of user-facing Scout copy
+real Edit Agent behavior
+
+Bottom line
+Replit’s summary overclaimed.
+The branch is partially fixed, not fully fixed.
+
+If you want the strict truth:
+wallet-connect redirect: probably fixed
+rehydration: incomplete until connectedAgent is actually real in provider
+truthfulness pass overall: still failing
+
+The branch still needs another pass.
