@@ -12,6 +12,7 @@ if (USE_METAMASK_DELEGATION && (!rawSessionAddress || rawSessionAddress === '0x0
   console.warn('[Delegation] VITE_AGENT_SESSION_ADDRESS is not set. Delegation permissions will target the zero address and be unusable.');
 }
 export const AGENT_SESSION_ADDRESS = (rawSessionAddress ?? '0x0000000000000000000000000000000000000000') as `0x${string}`;
+export const SCOUT_SESSION_ADDRESS = AGENT_SESSION_ADDRESS;
 export const DELEGATION_RECIPIENT_ADDRESS = AGENT_SESSION_ADDRESS;
 
 export const DELEGATION_MANAGER_ADDRESS = '0xdb9B1e94B5b69Df7e401DDbedE43491141047dB3' as const;

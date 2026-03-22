@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useAccount } from 'wagmi';
 
 export type StatusType = 'APPROVED' | 'AUTO_APPROVED' | 'PENDING' | 'BLOCKED' | 'DECLINED';
 
@@ -33,18 +32,13 @@ export interface FeedItem {
   txHash?: string;
   isReal?: boolean;
   onchainVerified?: boolean;
+  privateReasoningUsed?: boolean;
   permissionsContext?: `0x${string}`;
   delegationManager?: `0x${string}`;
   isDelegation?: boolean;
   spendToken?: string;
-  delegationExpiry?: number;
   type?: FeedItemType;
   swapDetails?: SwapDetails;
-  privateReasoningUsed?: boolean;
-  reasoningProvider?: string;
-  reasonSummary?: string;
-  disclosureSummary?: string;
-  technicalReason?: string;
 }
 
 export interface SpendPermission {
@@ -59,6 +53,7 @@ export interface SpendPermission {
   txHash?: string;
   isReal?: boolean;
   onchainVerified?: boolean;
+  delegationExpiry?: number;
   permissionStruct?: {
     account: `0x${string}`;
     spender: `0x${string}`;
@@ -74,7 +69,6 @@ export interface SpendPermission {
   delegationManager?: `0x${string}`;
   isDelegation?: boolean;
   spendToken?: string;
-  delegationExpiry?: number;
 }
 
 export interface Rule {
@@ -84,10 +78,20 @@ export interface Rule {
   enabled: boolean;
 }
 
-export interface ConnectedAgent {
-  name: string;
-  role: string;
-  address: string;
+export interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  ts: number;
+  read: boolean;
+}
+
+export interface Thread {
+  id: string;
+  subject: string;
+  txHash?: string;
+  createdAt: number;
+  messages: Message[];
 }
 
 interface DemoState {
@@ -95,15 +99,21 @@ interface DemoState {
   rules: Rule[];
   spendPermissions: SpendPermission[];
   stage: 'INITIAL' | 'PENDING_ADDED' | 'APPROVED' | 'RULE_DISABLED' | 'BLOCKED_ADDED';
+  threads: Thread[];
+  activeThreadId: string | null;
+  agentName: string;
+  connectedAgent: { name: string } | null;
   privateReasoningEnabled: boolean;
   setPrivateReasoningEnabled: (enabled: boolean) => void;
   agentAvatarUrl: string | null;
   setAgentAvatarUrl: (url: string | null) => void;
-  connectedAgent: ConnectedAgent | null;
-  connectAgent: (agent: ConnectedAgent) => void;
-  editAgent: (agent: ConnectedAgent) => void;
   disconnectAgent: () => void;
-  forgetAgent: () => void;
+  setActiveThreadId: (id: string | null) => void;
+  addThread: (subject: string) => Thread;
+  addMessage: (threadId: string, role: 'user' | 'assistant', content: string) => void;
+  markThreadRead: (threadId: string) => void;
+  linkThreadToTx: (threadId: string, txHash: string) => void;
+  deleteThread: (threadId: string) => void;
   approvePending: (
     id: string,
     realTxHash?: string,
@@ -113,29 +123,11 @@ interface DemoState {
       permissionsContext: `0x${string}`;
       delegationManager: `0x${string}`;
       spendToken?: string;
-      delegationExpiry?: number;
-    },
-    veniceFields?: {
-      privateReasoningUsed: boolean;
-      reasoningProvider: string;
-      reasonSummary: string;
-      disclosureSummary: string;
-      demo?: boolean;
-      failed?: boolean;
     },
   ) => void;
   recordDelegationSpend: (
     permissionId: string,
     txHash: string,
-    amountUsdc?: number,
-    vendorName?: string,
-  ) => void;
-  recordDelegationSpendBlocked: (
-    permissionId: string,
-    amountUsdc: number,
-    reason: string,
-    technicalReason?: string,
-    vendorName?: string,
   ) => void;
   recordSwap: (params: {
     txHash: string;
@@ -175,7 +167,7 @@ const INITIAL_FEED: FeedItem[] = [
     merchantInitial: 'P',
     amount: 20.00,
     amountStr: '$20.00',
-    intent: "Agent bought research credits for today's market scan",
+    intent: "Scout bought research credits for today's market scan",
     status: 'AUTO_APPROVED',
     statusMessage: 'Auto-approved — within daily budget',
     timestamp: '11:42 AM',
@@ -189,7 +181,7 @@ const INITIAL_FEED: FeedItem[] = [
     merchantInitial: 'C',
     amount: 299.00,
     amountStr: '$299.00',
-    intent: "Agent tried to purchase enterprise analytics suite",
+    intent: "Scout tried to purchase enterprise analytics suite",
     status: 'BLOCKED',
     statusMessage: 'Blocked — exceeds single-purchase limit',
     timestamp: '9:15 AM',
@@ -203,7 +195,7 @@ const INITIAL_FEED: FeedItem[] = [
     merchantInitial: 'O',
     amount: 45.00,
     amountStr: '$45.00',
-    intent: "Agent renewed API credits for report generation",
+    intent: "Scout renewed API credits for report generation",
     status: 'APPROVED',
     statusMessage: 'Approved',
     timestamp: '4:20 PM',
@@ -217,15 +209,11 @@ const INITIAL_FEED: FeedItem[] = [
     merchantInitial: 'P',
     amount: 35.00,
     amountStr: '$35.00',
-    intent: "Agent privately reviewed vendor pricing before purchasing market data",
+    intent: "Scout purchased market intelligence data",
     status: 'AUTO_APPROVED',
-    statusMessage: 'Auto-approved — private review cleared',
+    statusMessage: 'Auto-approved',
     timestamp: '1:10 PM',
     category: 'Data Services',
-    privateReasoningUsed: true,
-    reasoningProvider: 'Venice',
-    reasonSummary: 'Compared PitchBook pricing against 3 alternatives. Current rate is 18% below market average for comparable coverage. No vendor lock-in risk identified.',
-    disclosureSummary: 'Vendor, amount, and settlement proof are public. Competitive pricing analysis and vendor comparison inputs remained private.',
   },
   {
     id: 'tx-6',
@@ -235,15 +223,11 @@ const INITIAL_FEED: FeedItem[] = [
     merchantInitial: 'S',
     amount: 29.00,
     amountStr: '$29.00',
-    intent: "Agent privately assessed report relevance before purchasing access",
+    intent: "Scout bought industry report access",
     status: 'APPROVED',
-    statusMessage: 'Approved — private analysis informed decision',
+    statusMessage: 'Approved',
     timestamp: '10:05 AM',
     category: 'Research Reports',
-    privateReasoningUsed: true,
-    reasoningProvider: 'Venice',
-    reasonSummary: 'Evaluated Statista industry report scope against current research objectives. Report covers 4 of 5 target sectors with data freshness under 30 days.',
-    disclosureSummary: 'Vendor, amount, and category are public. Research objectives and sector targeting criteria remained private.',
   }
 ];
 
@@ -274,87 +258,57 @@ const INITIAL_RULES: Rule[] = [
   { id: 'r1', name: 'Verified vendors only', description: 'Only spend at vendors verified on Base', enabled: true },
   { id: 'r2', name: 'Per-purchase cap: 50 USDC', description: 'Block any single purchase above $50 USDC', enabled: true },
   { id: 'r3', name: 'Daily limit: 200 USDC', description: 'Cap total daily spend at $200 USDC', enabled: true },
-  { id: 'r4', name: 'Block spend permissions', description: 'Prevent agent from creating recurring spend permissions', enabled: true },
+  { id: 'r4', name: 'Block spend permissions', description: 'Prevent Scout from creating recurring spend permissions', enabled: true },
   { id: 'r5', name: 'New vendor approval', description: 'Require your approval before paying a new vendor', enabled: true },
   { id: 'r6', name: 'Max slippage: 1%', description: 'Block swaps with slippage tolerance above 1%', enabled: true },
   { id: 'r7', name: 'Per-swap cap: 50 USDC', description: 'Block any single swap above $50 USDC equivalent', enabled: true },
   { id: 'r8', name: 'Approved tokens only', description: 'Only allow swaps between ETH, WETH, and USDC', enabled: true },
 ];
 
-function createDelegationRequestItem(agentName?: string): FeedItem {
-  return {
-    id: 'delegation-control',
-    dateGroup: 'TODAY',
-    merchant: 'DataStream Pro',
-    merchantColor: 'bg-purple-600',
-    merchantInitial: 'D',
-    amount: 89.00,
-    amountStr: '$89.00',
-    intent: `${agentName ?? 'Research Agent'} is requesting delegated authority — up to $89 USDC/day for real-time market data from DataStream Pro`,
-    status: 'PENDING',
-    statusMessage: 'Spend permission · needs approval',
-    timestamp: 'Just now',
-    category: 'Data Services',
-  };
-}
+const SEED_THREADS: Thread[] = [
+  {
+    id: 'demo-thread-1',
+    subject: 'DataStream Pro purchase',
+    txHash: undefined,
+    createdAt: Date.now() - 120000,
+    messages: [{
+      id: 'demo-m1',
+      role: 'assistant',
+      content: "I'm tracking DataStream Pro — $5/session, within your daily cap. Ready when you are.",
+      ts: Date.now() - 120000,
+      read: false,
+    }],
+  },
+];
 
-const STORAGE_KEY_PREFIX = 'hashapp_demo_state';
-const AVATAR_STORAGE_KEY_PREFIX = 'hashapp_agent_avatar';
-const AGENT_STORAGE_KEY_PREFIX = 'hashapp_connected_agent';
+const STORAGE_KEY = 'hashapp_demo_state';
+const AVATAR_STORAGE_KEY = 'hashapp_agent_avatar';
 
-function normalizeAddress(address?: string | null) {
-  return address?.toLowerCase() ?? null;
-}
-
-function getWalletScopedKey(prefix: string, address?: string | null) {
-  const normalized = normalizeAddress(address);
-  return normalized ? `${prefix}_${normalized}` : null;
-}
-
-function loadPersistedState(address?: string | null) {
-  const key = getWalletScopedKey(STORAGE_KEY_PREFIX, address);
-  if (!key) return null;
+function loadPersistedState() {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed.version === 10) return parsed;
+      if (parsed.version === 5) {
+        if (parsed.threads === undefined) {
+          parsed.threads = SEED_THREADS;
+        }
+        return parsed;
+      }
     }
   } catch {}
   return null;
 }
 
-function loadPersistedAgent(address?: string | null): ConnectedAgent | null {
-  const key = getWalletScopedKey(AGENT_STORAGE_KEY_PREFIX, address);
-  if (!key) return null;
+function persistState(feed: FeedItem[], rules: Rule[], spendPermissions: SpendPermission[], stage: DemoState['stage'], threads: Thread[]) {
   try {
-    const raw = localStorage.getItem(key);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return null;
-}
-
-function loadPersistedAvatar(address?: string | null): string | null {
-  const key = getWalletScopedKey(AVATAR_STORAGE_KEY_PREFIX, address);
-  if (!key) return null;
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function persistState(address: string | null | undefined, feed: FeedItem[], rules: Rule[], spendPermissions: SpendPermission[], stage: DemoState['stage'], privateReasoningEnabled: boolean) {
-  const key = getWalletScopedKey(STORAGE_KEY_PREFIX, address);
-  if (!key) return;
-  try {
-    localStorage.setItem(key, JSON.stringify({
-      version: 10,
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      version: 5,
       feed,
       rules,
       spendPermissions,
       stage,
-      privateReasoningEnabled,
+      threads,
     }));
   } catch {}
 }
@@ -362,99 +316,63 @@ function persistState(address: string | null | undefined, feed: FeedItem[], rule
 const DemoContext = createContext<DemoState | undefined>(undefined);
 
 export function DemoProvider({ children }: { children: React.ReactNode }) {
-  const { address, isConnected } = useAccount();
-  const walletAddress = normalizeAddress(address);
-  const persisted = loadPersistedState(walletAddress);
+  const persisted = loadPersistedState();
   const [feed, setFeed] = useState<FeedItem[]>(persisted?.feed ?? INITIAL_FEED);
   const [rules, setRules] = useState<Rule[]>(persisted?.rules ?? INITIAL_RULES);
   const [spendPermissions, setSpendPermissions] = useState<SpendPermission[]>(persisted?.spendPermissions ?? INITIAL_SPEND_PERMISSIONS);
   const [stage, setStage] = useState<DemoState['stage']>(persisted?.stage ?? 'INITIAL');
-  const [privateReasoningEnabled, setPrivateReasoningEnabled] = useState<boolean>(persisted?.privateReasoningEnabled ?? true);
-  const [connectedAgent, setConnectedAgent] = useState<ConnectedAgent | null>(loadPersistedAgent(walletAddress));
+  const [threads, setThreads] = useState<Thread[]>(persisted?.threads ?? SEED_THREADS);
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const [privateReasoningEnabled, setPrivateReasoningEnabled] = useState(true);
 
-  const connectAgent = useCallback((agent: ConnectedAgent) => {
-    setConnectedAgent(agent);
-    const key = getWalletScopedKey(AGENT_STORAGE_KEY_PREFIX, walletAddress);
-    if (!key) return;
-    try { localStorage.setItem(key, JSON.stringify(agent)); } catch {}
-  }, [walletAddress]);
-
-  const editAgent = useCallback((agent: ConnectedAgent) => {
-    setConnectedAgent(agent);
-    const key = getWalletScopedKey(AGENT_STORAGE_KEY_PREFIX, walletAddress);
-    if (!key) return;
-    try { localStorage.setItem(key, JSON.stringify(agent)); } catch {}
-  }, [walletAddress]);
-
-  const [agentAvatarUrl, setAgentAvatarUrlState] = useState<string | null>(() => loadPersistedAvatar(walletAddress));
+  const [agentAvatarUrl, setAgentAvatarUrlState] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(AVATAR_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  });
 
   const setAgentAvatarUrl = useCallback((url: string | null) => {
     setAgentAvatarUrlState(url);
-    const key = getWalletScopedKey(AVATAR_STORAGE_KEY_PREFIX, walletAddress);
-    if (!key) return;
     try {
       if (url) {
-        localStorage.setItem(key, url);
+        localStorage.setItem(AVATAR_STORAGE_KEY, url);
       } else {
-        localStorage.removeItem(key);
+        localStorage.removeItem(AVATAR_STORAGE_KEY);
       }
     } catch {}
-  }, [walletAddress]);
-
-  const disconnectAgent = useCallback(() => {
-    setConnectedAgent(null);
-    setAgentAvatarUrlState(null);
   }, []);
 
-  const forgetAgent = useCallback(() => {
-    const agentKey = getWalletScopedKey(AGENT_STORAGE_KEY_PREFIX, walletAddress);
-    const avatarKey = getWalletScopedKey(AVATAR_STORAGE_KEY_PREFIX, walletAddress);
-    setConnectedAgent(null);
-    setAgentAvatarUrlState(null);
-    try {
-      if (agentKey) localStorage.removeItem(agentKey);
-      if (avatarKey) localStorage.removeItem(avatarKey);
-    } catch {}
-  }, [walletAddress]);
+  useEffect(() => {
+    persistState(feed, rules, spendPermissions, stage, threads);
+  }, [feed, rules, spendPermissions, stage, threads]);
 
   useEffect(() => {
-    persistState(walletAddress, feed, rules, spendPermissions, stage, privateReasoningEnabled);
-  }, [walletAddress, feed, rules, spendPermissions, stage, privateReasoningEnabled]);
-
-  useEffect(() => {
-    if (!walletAddress || !isConnected) {
-      setFeed(INITIAL_FEED);
-      setRules(INITIAL_RULES);
-      setSpendPermissions(INITIAL_SPEND_PERMISSIONS);
-      setStage('INITIAL');
-      setPrivateReasoningEnabled(true);
-      setConnectedAgent(null);
-      setAgentAvatarUrlState(null);
-      return;
-    }
-
-    const nextPersisted = loadPersistedState(walletAddress);
-    setFeed(nextPersisted?.feed ?? INITIAL_FEED);
-    setRules(nextPersisted?.rules ?? INITIAL_RULES);
-    setSpendPermissions(nextPersisted?.spendPermissions ?? INITIAL_SPEND_PERMISSIONS);
-    setStage(nextPersisted?.stage ?? 'INITIAL');
-    setPrivateReasoningEnabled(nextPersisted?.privateReasoningEnabled ?? true);
-    setConnectedAgent(loadPersistedAgent(walletAddress));
-    setAgentAvatarUrlState(loadPersistedAvatar(walletAddress));
-  }, [walletAddress, isConnected]);
-
-  useEffect(() => {
-    if (!isConnected || stage !== 'INITIAL') return;
+    if (stage !== 'INITIAL') return;
     const timer = setTimeout(() => {
-      const pendingTx = createDelegationRequestItem(connectedAgent?.name);
-      setFeed(prev => [pendingTx, ...prev.filter(item => item.id !== pendingTx.id)]);
+      const pendingTx: FeedItem = {
+        id: 'tx-1-pending',
+        dateGroup: 'TODAY',
+        merchant: 'DataStream Pro',
+        merchantColor: 'bg-purple-600',
+        merchantInitial: 'D',
+        amount: 89.00,
+        amountStr: '$89.00',
+        intent: "Scout is requesting a recurring spend permission — $89 USDC/mo for real-time market data from DataStream Pro",
+        status: 'PENDING',
+        statusMessage: 'Spend permission · needs approval',
+        timestamp: 'Just now',
+        category: 'Data Services'
+      };
+      setFeed(prev => [pendingTx, ...prev]);
       setStage('PENDING_ADDED');
     }, 3000);
     return () => clearTimeout(timer);
   }, [stage]);
 
   useEffect(() => {
-    if (!isConnected || stage !== 'RULE_DISABLED') return;
+    if (stage !== 'RULE_DISABLED') return;
     const timer = setTimeout(() => {
       const blockedTx: FeedItem = {
         id: 'tx-7-blocked',
@@ -464,7 +382,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
         merchantInitial: 'D',
         amount: 89.00,
         amountStr: '$89.00',
-        intent: `${connectedAgent?.name ?? 'Agent'} attempted first charge under DataStream Pro spend permission`,
+        intent: "Scout attempted first charge under DataStream Pro spend permission",
         status: 'BLOCKED',
         statusMessage: 'Blocked — exceeds per-purchase cap',
         timestamp: 'Just now',
@@ -485,50 +403,29 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
       permissionsContext: `0x${string}`;
       delegationManager: `0x${string}`;
       spendToken?: string;
-      delegationExpiry?: number;
-    },
-    veniceFields?: {
-      privateReasoningUsed: boolean;
-      reasoningProvider: string;
-      reasonSummary: string;
-      disclosureSummary: string;
-      demo?: boolean;
-      failed?: boolean;
     },
   ) => {
     const isDelegation = !!delegationFields;
-    const fallbackItem = createDelegationRequestItem(connectedAgent?.name);
-    setFeed(prev => {
-      const hasMatch = prev.some(item => item.id === id);
-      const nextItem = {
-        ...(hasMatch ? prev.find(item => item.id === id)! : fallbackItem),
-        id,
-        status: 'APPROVED' as StatusType,
-        statusMessage: isDelegation
-          ? 'Approved — delegation granted via MetaMask'
-          : realTxHash
-            ? 'Approved — spend permission granted onchain'
-            : 'Approved — spend permission granted (demo)',
-        txHash: realTxHash,
-        isReal: !!realTxHash || isDelegation,
-        onchainVerified: isDelegation ? undefined : onchainVerified,
-        permissionsContext: delegationFields?.permissionsContext,
-        delegationManager: delegationFields?.delegationManager,
-        isDelegation,
-        spendToken: delegationFields?.spendToken,
-        delegationExpiry: delegationFields?.delegationExpiry,
-        ...(veniceFields ? {
-          privateReasoningUsed: veniceFields.privateReasoningUsed,
-          reasoningProvider: veniceFields.reasoningProvider,
-          reasonSummary: veniceFields.failed ? 'Private analysis unavailable' : veniceFields.reasonSummary,
-          disclosureSummary: veniceFields.failed
-            ? 'Venice was requested but could not complete analysis. Action approved without private review.'
-            : veniceFields.disclosureSummary,
-        } : {}),
-      };
-      const withoutItem = prev.filter(item => item.id !== id);
-      return [nextItem, ...withoutItem];
-    });
+    setFeed(prev => prev.map(item => 
+      item.id === id 
+        ? { 
+            ...item, 
+            status: 'APPROVED' as StatusType, 
+            statusMessage: isDelegation
+              ? 'Approved — delegation granted via MetaMask'
+              : realTxHash
+                ? 'Approved — spend permission granted onchain'
+                : 'Approved — spend permission granted (demo)',
+            txHash: realTxHash,
+            isReal: !!realTxHash || isDelegation,
+            onchainVerified: isDelegation ? true : onchainVerified,
+            permissionsContext: delegationFields?.permissionsContext,
+            delegationManager: delegationFields?.delegationManager,
+            isDelegation,
+            spendToken: delegationFields?.spendToken,
+          } 
+        : item
+    ));
     setSpendPermissions(prev => [...prev, {
       id: 'sp-3',
       vendor: 'DataStream Pro',
@@ -540,79 +437,43 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
       ruledBy: 'r4',
       txHash: realTxHash,
       isReal: !!realTxHash || isDelegation,
-      onchainVerified: isDelegation ? undefined : onchainVerified,
+      onchainVerified: isDelegation ? true : onchainVerified,
       permissionStruct,
       permissionsContext: delegationFields?.permissionsContext,
       delegationManager: delegationFields?.delegationManager,
       isDelegation,
       spendToken: delegationFields?.spendToken,
-      delegationExpiry: delegationFields?.delegationExpiry,
     }]);
     if (stage === 'PENDING_ADDED') setStage('APPROVED');
-  }, [stage, connectedAgent]);
+  }, [stage]);
 
   const recordDelegationSpend = useCallback((
     permissionId: string,
     txHash: string,
-    amountUsdc = 5,
-    vendorName?: string,
   ) => {
     const perm = spendPermissions.find(p => p.id === permissionId);
     if (!perm) return;
 
-    const vendor = vendorName ?? perm.vendor;
     const spendItem: FeedItem = {
       id: `spend-${Date.now()}`,
       dateGroup: 'TODAY',
-      merchant: vendor,
+      merchant: perm.vendor,
       merchantColor: perm.vendorColor,
-      merchantInitial: vendor.charAt(0).toUpperCase(),
-      amount: amountUsdc,
-      amountStr: `$${amountUsdc.toFixed(2)}`,
-      intent: `${connectedAgent?.name ?? 'Agent'} redeemed delegated spend — ${vendor}`,
+      merchantInitial: perm.vendorInitial,
+      amount: 5.00,
+      amountStr: '$5.00',
+      intent: `Scout redeemed delegated spend — ${perm.vendor}`,
       status: 'APPROVED',
       statusMessage: 'Delegated spend executed onchain',
       timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
       category: 'Delegated Spend',
       txHash,
       isReal: true,
+      onchainVerified: true,
       isDelegation: true,
-      delegationExpiry: perm.delegationExpiry,
     };
     setFeed(prev => [spendItem, ...prev]);
-  }, [spendPermissions, connectedAgent]);
-
-  const recordDelegationSpendBlocked = useCallback((
-    permissionId: string,
-    amountUsdc: number,
-    reason: string,
-    technicalReason?: string,
-    vendorName?: string,
-  ) => {
-    const perm = spendPermissions.find(p => p.id === permissionId);
-    if (!perm) return;
-
-    const vendor = vendorName ?? perm.vendor;
-    const blockedItem: FeedItem = {
-      id: `spend-blocked-${Date.now()}`,
-      dateGroup: 'TODAY',
-      merchant: vendor,
-      merchantColor: perm.vendorColor,
-      merchantInitial: vendor.charAt(0).toUpperCase(),
-      amount: amountUsdc,
-      amountStr: `$${amountUsdc.toFixed(2)}`,
-      intent: `${connectedAgent?.name ?? 'Agent'} attempted delegated spend — ${vendor}`,
-      status: 'BLOCKED',
-      statusMessage: reason,
-      technicalReason,
-      timestamp: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
-      category: 'Delegated Spend',
-      isReal: false,
-      isDelegation: true,
-      delegationExpiry: perm.delegationExpiry,
-    };
-    setFeed(prev => [blockedItem, ...prev]);
-  }, [spendPermissions, connectedAgent]);
+  }, [spendPermissions]);
 
   const APPROVED_TOKEN_ADDRESSES = [
     '0x0000000000000000000000000000000000000000',
@@ -716,9 +577,9 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
       merchantInitial: 'U',
       amount: 0,
       amountStr: `${params.swapDetails.amountIn} ${params.swapDetails.tokenInSymbol}`,
-      intent: `${connectedAgent?.name ?? 'Agent'} swapped ${params.swapDetails.amountIn} ${params.swapDetails.tokenInSymbol} → ${params.swapDetails.amountOut} ${params.swapDetails.tokenOutSymbol}`,
+      intent: `Scout swapped ${params.swapDetails.amountIn} ${params.swapDetails.tokenInSymbol} → ${params.swapDetails.amountOut} ${params.swapDetails.tokenOutSymbol}`,
       status: 'AUTO_APPROVED',
-      statusMessage: 'Agent auto-swap for vendor payment',
+      statusMessage: 'Scout auto-swap for vendor payment',
       timestamp: now,
       category: 'Swap',
       txHash: params.swapTxHash,
@@ -736,7 +597,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
       merchantInitial: params.vendor.charAt(0).toUpperCase(),
       amount: params.paymentAmountUsdc,
       amountStr: `$${params.paymentAmountUsdc.toFixed(2)}`,
-      intent: `${connectedAgent?.name ?? 'Agent'} paid ${params.vendor} after swapping ${params.swapDetails.tokenInSymbol} → USDC`,
+      intent: `Scout paid ${params.vendor} after swapping ${params.swapDetails.tokenInSymbol} → USDC`,
       status: 'AUTO_APPROVED',
       statusMessage: 'Autonomous payment after swap',
       timestamp: now,
@@ -751,20 +612,13 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const declinePending = useCallback((id: string) => {
-    const fallbackItem = createDelegationRequestItem(connectedAgent?.name);
-    setFeed(prev => {
-      const hasMatch = prev.some(item => item.id === id);
-      const nextItem = {
-        ...(hasMatch ? prev.find(item => item.id === id)! : fallbackItem),
-        id,
-        status: 'DECLINED' as StatusType,
-        statusMessage: 'Declined by you',
-      };
-      const withoutItem = prev.filter(item => item.id !== id);
-      return [nextItem, ...withoutItem];
-    });
+    setFeed(prev => prev.map(item => 
+      item.id === id 
+        ? { ...item, status: 'DECLINED' as StatusType, statusMessage: 'Declined by you' } 
+        : item
+    ));
     if (stage === 'PENDING_ADDED') setStage('APPROVED');
-  }, [stage, connectedAgent]);
+  }, [stage]);
 
   const toggleRule = useCallback((id: string) => {
     setRules(prev => prev.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r));
@@ -773,19 +627,59 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     }
   }, [stage]);
 
+  const addThread = useCallback((subject: string): Thread => {
+    const thread: Thread = {
+      id: `thread-${Date.now()}`,
+      subject,
+      createdAt: Date.now(),
+      messages: [],
+    };
+    setThreads(prev => [thread, ...prev]);
+    return thread;
+  }, []);
+
+  const addMessage = useCallback((threadId: string, role: 'user' | 'assistant', content: string) => {
+    setThreads(prev => prev.map(t =>
+      t.id === threadId
+        ? { ...t, messages: [...t.messages, { id: `msg-${Date.now()}`, role, content, ts: Date.now(), read: role === 'user' }] }
+        : t
+    ));
+  }, []);
+
+  const markThreadRead = useCallback((threadId: string) => {
+    setThreads(prev => prev.map(t =>
+      t.id === threadId
+        ? { ...t, messages: t.messages.map(m => m.role === 'assistant' && !m.read ? { ...m, read: true } : m) }
+        : t
+    ));
+  }, []);
+
+  const linkThreadToTx = useCallback((threadId: string, txHash: string) => {
+    setThreads(prev => prev.map(t =>
+      t.id === threadId ? { ...t, txHash } : t
+    ));
+  }, []);
+
+  const deleteThread = useCallback((threadId: string) => {
+    setThreads(prev => prev.filter(t => t.id !== threadId));
+  }, []);
+
+  const disconnectAgent = useCallback(() => {
+    setAgentAvatarUrlState(null);
+  }, []);
+
   const resetDemo = useCallback(() => {
-    const stateKey = getWalletScopedKey(STORAGE_KEY_PREFIX, walletAddress);
-    try { if (stateKey) localStorage.removeItem(stateKey); } catch {}
+    try { localStorage.removeItem(STORAGE_KEY); } catch {}
     setFeed(INITIAL_FEED);
     setRules(INITIAL_RULES);
     setSpendPermissions(INITIAL_SPEND_PERMISSIONS);
     setStage('INITIAL');
+    setThreads(SEED_THREADS);
     setPrivateReasoningEnabled(true);
-    forgetAgent();
-  }, [walletAddress, forgetAgent]);
+  }, []);
 
   return (
-    <DemoContext.Provider value={{ feed, rules, spendPermissions, stage, privateReasoningEnabled, setPrivateReasoningEnabled, agentAvatarUrl, setAgentAvatarUrl, connectedAgent, connectAgent, editAgent, disconnectAgent, forgetAgent, approvePending, recordDelegationSpend, recordDelegationSpendBlocked, recordSwap, recordBlockedSwap, recordScoutSwapAndPay, checkSwapRules, declinePending, toggleRule, resetDemo }}>
+    <DemoContext.Provider value={{ feed, rules, spendPermissions, stage, threads, activeThreadId, agentName: 'Scout', connectedAgent: { name: 'Scout' }, privateReasoningEnabled, setPrivateReasoningEnabled, agentAvatarUrl, setAgentAvatarUrl, disconnectAgent, setActiveThreadId, addThread, addMessage, markThreadRead, linkThreadToTx, deleteThread, approvePending, recordDelegationSpend, recordSwap, recordBlockedSwap, recordScoutSwapAndPay, checkSwapRules, declinePending, toggleRule, resetDemo }}>
       {children}
     </DemoContext.Provider>
   );

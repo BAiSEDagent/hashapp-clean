@@ -3,7 +3,7 @@ import { USDC_BASE_SEPOLIA } from '@/config/delegation';
 export interface DelegationSpendParams {
   permissionsContext: `0x${string}`;
   delegationManager: `0x${string}`;
-  amountUsdc: string;
+  amountUsdc: number;
   recipient: `0x${string}`;
   spendToken: string;
 }
@@ -15,7 +15,7 @@ export interface DelegationSpendResult {
 
 let spendCounter = 0;
 
-function generateIdempotencyKey(context: string, amount: string, recipient: string): string {
+function generateIdempotencyKey(context: string, amount: number, recipient: string): string {
   spendCounter++;
   return `${context.slice(0, 40)}-${recipient.slice(0, 10)}-${amount}-${spendCounter}`;
 }
