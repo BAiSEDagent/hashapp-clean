@@ -1,94 +1,78 @@
 # Venice
 
 ## Why it fits Hashapp
-Venice fits Hashapp as an **optional private reasoning layer** behind spending decisions.
+Venice fits Hashapp as a **private reasoning layer** behind financial decisions.
 
-Hashapp’s core problem is not just letting agents spend. It is helping humans trust agent spending without exposing all of their context publicly.
+Hashapp’s job is not just to let agents move money. It is to make agent money movement legible, bounded, and trustworthy for the human in control.
 
-Venice gives us a clean way to say:
+Venice strengthens that by adding:
 - private cognition
-- public consequence
-- user-controlled privacy
+- trusted public action
+- better handling for sensitive context
 
 ## Product role
 Venice is **not** the product.
-Venice is a feature layer inside the product.
+Venice is a capability layer inside Hashapp.
 
-## Feature concept
-### Private Review
-A user-controlled feature toggle that lets Scout privately evaluate sensitive requests before acting.
+Hashapp remains:
+- the control layer
+- the approval layer
+- the policy layer
+- the receipt / provenance layer
 
-When enabled, Venice can help reason about:
-- new vendors
-- recurring charges
-- unusual amounts
-- requests that do not match historical patterns
-- sensitive purchase context
+## Best framing
+The right Venice framing for Hashapp is:
 
-## User-facing behavior
-### Off
-Scout follows explicit rules only.
+> Private reasoning with trusted public action.
 
-### On
-Scout can use private reasoning for:
-- new vendor evaluation
-- recurring charge review
-- unusual request escalation
-- confidence-based ask / allow / block recommendations
-
-## Economic model (important)
-Venice should not feel like a permanent hidden subsidy.
-A stronger product model is to treat private reasoning as an optional paid capability.
-
-### Direction
-When **Private Review** is enabled, Hashapp can route the Venice analysis call through an **x402-gated endpoint**.
 That means:
-- private reasoning becomes a real paid feature
-- the toggle controls actual capability, not cosmetic state
-- Hashapp is not forced to silently eat inference cost forever
+- reasoning can stay private
+- approvals and outcomes remain legible
+- receipts can disclose whether private reasoning informed the action
+- the human still controls the money surface
 
-### Product meaning
-- **Off** → no private reasoning, no Venice cost
-- **On** → private reasoning available, billed capability / credits path
+Do **not** frame this as:
+- a separate “Venice Mode”
+- a hardcoded assistant identity
+- the whole product thesis
 
-### Best framing
-Do not call this "Venice Mode."
-Call it:
-- **Private Review**
-- or **Enable private review**
+## What Venice should do inside Hashapp
+Venice is strongest when used for requests that benefit from privacy-sensitive reasoning, such as:
+- new vendors
+- unusual spend requests
+- recurring payments with unclear context
+- high-sensitivity purchases
+- policy edge cases where explanation quality matters
 
-And describe the economics plainly:
-- private reasoning may require credits
-- or private reasoning is billed through an x402 path
-
-### Build order
-1. First prove one real Venice-backed action
-2. Then add x402 gating so the feature becomes economically real
-
-Do not let the x402 integration delay the first Venice proof loop.
-
-## Best UI placement
-Put **Private Review** inside:
-- Rules screen
-or
-- Scout detail screen
-
-## Suggested toggle copy
-### Label
-Private Review
-
-### Description
-Use private reasoning for new vendors, recurring charges, and unusual requests before Scout acts.
+## User-visible behavior
+When Venice is involved, Hashapp should surface that clearly in the request / receipt flow:
+- request came from a linked agent
+- private reasoning may have informed the recommendation
+- human still approves, denies, or relies on bounded policy
+- resulting action is still tied to proof and receipts
 
 ## Demo value
-Venice creates a strong optional moment in the demo:
-- Private Review off → rules only
-- Private Review on → same request gets private evaluation and a more intelligent approval / escalation recommendation
+Venice improves the demo when it makes the system feel more trustworthy, not more magical.
 
-## Track alignment
-- Agents that keep secrets
-- Agents that trust
+Strong Venice moment:
+- agent requests a spend
+- Venice-backed reasoning produces a structured recommendation
+- human sees the recommendation in Hashapp
+- approval or denial remains legible
+- final outcome is attached to receipts / proof
+
+That shows:
+- private reasoning
+- human control
+- bounded authority
+- auditable outcome
+
+## Submission value
+For Synthesis, Venice helps Hashapp fit **Private Agents, Trusted Actions** because it sharpens the privacy / trust story without changing the product category.
+
+Hashapp is still the money app.
+Venice makes the money app more trustworthy for agent-driven decisions.
 
 ## Rule
 Do not let Venice take over the whole product story.
-Hashapp remains the product; Venice is a trusted intelligence layer inside it.
+Hashapp should always read as the human-controlled money surface for agents.
