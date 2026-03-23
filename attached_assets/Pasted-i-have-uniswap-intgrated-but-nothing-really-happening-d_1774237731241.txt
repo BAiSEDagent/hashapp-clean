@@ -1,0 +1,93 @@
+i have uniswap intgrated but nothing really happening. do you have anyt ideas i use this for what i ahve so far - Agentic Finance (Best Uniswap API Integration)
+$5,000
+Build the future of agentic finance with Uniswap. Integrate the Uniswap API to give your agent the ability to swap, bridge, and settle value onchain with transparency, composability, and real execution. Agents that trade, coordinate with other agents, or invent primitives we haven't imagined yet — if it's powered by Uniswap and it ships, we want to see it.
+Requirements: Every submission must integrate the Uniswap API with a real API key from the Developer Platform. Functional swaps with real TxIDs on testnet or mainnet. Open source, public GitHub with README. No mocks, no workarounds. Bonus: the deeper your agent goes into the Uniswap stack — Hooks, AI Skills, Unichain, v4 contracts, Permit2 — the more we notice.
+Any agent that pays needs to swap. We're that layer. Show us what comes next.
+Resources:
+* __Uniswap API__
+* __Uniswap AI Skills__
+* __Uniswap API Docs__
+* __Uniswap Docs__
+
+Show less
+9:40 PM
+
+Architected Uniswap as settlement layer for agent-approved payments
+Architected Uniswap as settlement layer for agent-approved payments
+The connection is already in front of you. You don't need a new idea — you need to make Uniswap load-bearing in the flow you already have.
+
+The natural integration:
+
+Right now when a human approves a spend request, the delegation executes a USDC transfer directly. But what if the human's wallet has ETH and not enough USDC? Or what if the agent wants to pay in USDC but the treasury is in WETH?
+
+Uniswap becomes the settlement layer:
+
+Agent sends spend_request for $5 USDC
+        ↓
+Human approves
+        ↓
+Hashapp checks: does wallet have enough USDC?
+        ↓
+If not — Uniswap swaps ETH → USDC automatically
+        ↓
+Delegation spend executes with the swapped USDC
+        ↓
+Receipt shows: swap tx + spend tx + Venice attribution
+That is "agents that pay" with Uniswap as the actual settlement layer. Not a swap interface bolted on the side. Uniswap is why the spend can happen at all.
+
+What this gives you for the judges:
+
+Real swap TxID on testnet — Uniswap requirement satisfied
+Functional: swap only fires when balance is insufficient — real logic not theater
+The agent's spend request triggered the swap — Uniswap is downstream of Venice reasoning
+Two onchain proofs per approved spend: swap tx + delegation tx
+What you need to build:
+
+In handleApproveSpend, before calling executeDelegationSpend, add a balance check:
+
+typescript
+// Check USDC balance
+const usdcBalance = await getUsdcBalance(address);
+
+if (usdcBalance < amount) {
+  // Swap enough ETH → USDC to cover
+  const swapResult = await fetch(`${API_BASE}/swap/execute`, {
+    method: "POST",
+    body: JSON.stringify({
+      tokenIn: "ETH",
+      tokenOut: "USDC", 
+      amountOut: amount - usdcBalance,
+      recipient: address,
+    })
+  });
+  const { txHash: swapTx } = await swapResult.json();
+  // wait for confirmation, then proceed
+}
+
+// Now execute delegation spend
+```
+
+And on the receipt, show both:
+```
+Swap     0xabc...  ETH → USDC  Uniswap
+Spend    0x810...  5 USDC      MetaMask Delegation
+Reason   Private via Venice
+That receipt is the whole Venice + MetaMask + Uniswap story in three rows.
+
+Is your existing /api/swap/execute endpoint functional and hitting the real Uniswap API with your key, or is it still returning mocked responses?
+
+Screenshot 2026-03-22 at 9.46.00 PM.png
+Screenshot 2026-03-22 at 9.46.11 PM.png
+this is currently on the agents tab under our new venice chat feature
+
+9:47 PM
+The UI exists. The flow is described correctly. The only thing broken is AGENT_API_TOKEN not being set in Replit secrets.
+
+Two things:
+
+1. Fix the immediate error — 30 seconds
+
+In Replit secrets, add:
+
+AGENT_API_TOKEN=<any strong random string>
+Then in the frontend, wherever "Trigger Agent Swap → Pay" fires, make sure it sends that token in the Authorization header. That unblocks the button immediately.
