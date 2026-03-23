@@ -92,6 +92,23 @@ Expected reasoning output usually includes:
 - amount
 - rationale
 
+### Venice-backed reasoning usage
+For private reasoning inside Hashapp, prefer the Hashapp surface rather than calling Venice directly from an external agent.
+
+Use `POST /api/gateway/reason` when you need Hashapp to produce a machine-readable recommendation that may be backed by Venice.
+
+Good use cases:
+- evaluating a new vendor
+- checking whether an unusual amount should be escalated
+- deciding whether to ask for approval now or wait
+- requesting a concise rationale before sending a spend request
+
+Agent rule:
+- ask Hashapp for the recommendation
+- do not claim direct Venice execution unless the exact path is verified
+- do not describe Venice as the whole product
+- treat Venice as a private reasoning layer that informs trusted public action
+
 ## Recommended Request Shape
 When an external agent is deciding what to send, this is the right semantic structure:
 
@@ -173,6 +190,12 @@ MetaMask delegation is a core proof and bounded-authority layer. Frame it as del
 
 ### Venice
 Venice is a **private reasoning layer** inside the product. Do not frame it as a standalone app mode.
+
+For external agents, the preferred usage path is:
+1. send context to Hashapp
+2. call `POST /api/gateway/reason` when a structured recommendation is needed
+3. treat the response as a recommendation, not automatic execution
+4. if the human or policy approves, continue through the normal request / receipt flow
 
 ### Uniswap
 Frame Uniswap as **Swap to Pay**. Do not frame Hashapp as a generic trading product.
