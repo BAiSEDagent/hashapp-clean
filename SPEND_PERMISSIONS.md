@@ -15,7 +15,7 @@ Hashapp does not hold funds. It manages:
 - trusted destinations
 
 ## Product promise
-**Your wallet, Scout’s permissions.**
+**Your wallet, your linked agent’s permissions.**
 
 ## Plumbing
 ### Layer 1 — funds
@@ -30,12 +30,12 @@ Hashapp stores user-facing policy:
 - active spend permissions
 
 ### Layer 3 — scoped authority
-Scout acts through bounded authority:
+The linked agent acts through bounded authority:
 - session key
 - smart wallet permission
 - or spend permission primitive
 
-Scout never gets full wallet control.
+The linked agent never gets full wallet control.
 
 ### Layer 4 — enforcement
 #### App / backend layer
@@ -65,7 +65,7 @@ User approves:
 - cadence = monthly
 - revocable = yes
 
-When Scout renews:
+When the linked agent renews:
 1. app checks if policy still allows it
 2. permission layer checks if spend permission is still valid
 3. if valid, payment settles
@@ -97,7 +97,7 @@ Power-user controls:
 - presets
 - general rule toggles
 
-### Money / Scout
+### Money / Linked Agent
 - active spend permissions
 - recurring permissions
 - vendor-specific limits
@@ -105,8 +105,8 @@ Power-user controls:
 
 ## Language guidance
 Preferred:
-- Available for Scout
-- Allocated to Scout
+- Available for linked agent
+- Allocated to linked agent
 - Protected by your rules
 - Spend permission
 - Active permission
