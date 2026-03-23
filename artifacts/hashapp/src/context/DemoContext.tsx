@@ -287,9 +287,14 @@ const SEED_THREADS: Thread[] = [
   },
 ];
 
-const STORAGE_KEY = 'hashapp_demo_state';
+const STORAGE_KEY_PREFIX = 'hashapp_demo_state';
 const AVATAR_STORAGE_KEY_PREFIX = 'hashapp_agent_avatar';
 const AGENT_STORAGE_KEY_PREFIX = 'hashapp_connected_agent';
+
+function stateKey(walletAddress: string | undefined) {
+  if (!walletAddress || typeof walletAddress !== 'string') return null;
+  return `${STORAGE_KEY_PREFIX}_${walletAddress.toLowerCase()}`;
+}
 
 function agentKey(walletAddress: string | undefined) {
   if (!walletAddress) return null;
@@ -301,12 +306,14 @@ function avatarKey(walletAddress: string | undefined) {
   return `${AVATAR_STORAGE_KEY_PREFIX}_${walletAddress.toLowerCase()}`;
 }
 
-function loadPersistedState() {
+function loadPersistedState(walletAddress: string | undefined) {
+  const key = stateKey(walletAddress);
+  if (!key) return null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed.version === 6) {
+      if (parsed.version === 7) {
         if (parsed.threads === undefined) {
           parsed.threads = SEED_THREADS;
         }
@@ -317,10 +324,12 @@ function loadPersistedState() {
   return null;
 }
 
-function persistState(feed: FeedItem[], rules: Rule[], spendPermissions: SpendPermission[], stage: DemoState['stage'], threads: Thread[]) {
+function persistState(walletAddress: string | undefined, feed: FeedItem[], rules: Rule[], spendPermissions: SpendPermission[], stage: DemoState['stage'], threads: Thread[]) {
+  const key = stateKey(walletAddress);
+  if (!key) return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      version: 6,
+    localStorage.setItem(key, JSON.stringify({
+      version: 7,
       feed,
       rules,
       spendPermissions,
@@ -381,12 +390,11 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   const walletRef = useRef(walletAddress);
   walletRef.current = walletAddress;
 
-  const persisted = loadPersistedState();
-  const [feed, setFeed] = useState<FeedItem[]>(persisted?.feed ?? INITIAL_FEED);
-  const [rules, setRules] = useState<Rule[]>(persisted?.rules ?? INITIAL_RULES);
-  const [spendPermissions, setSpendPermissions] = useState<SpendPermission[]>(persisted?.spendPermissions ?? INITIAL_SPEND_PERMISSIONS);
-  const [stage, setStage] = useState<DemoState['stage']>(persisted?.stage ?? 'INITIAL');
-  const [threads, setThreads] = useState<Thread[]>(persisted?.threads ?? SEED_THREADS);
+  const [feed, setFeed] = useState<FeedItem[]>(INITIAL_FEED);
+  const [rules, setRules] = useState<Rule[]>(INITIAL_RULES);
+  const [spendPermissions, setSpendPermissions] = useState<SpendPermission[]>(INITIAL_SPEND_PERMISSIONS);
+  const [stage, setStage] = useState<DemoState['stage']>('INITIAL');
+  const [threads, setThreads] = useState<Thread[]>(SEED_THREADS);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [privateReasoningEnabled, setPrivateReasoningEnabled] = useState(true);
 
@@ -402,6 +410,14 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     const avatar = loadAgentAvatar(addr);
     setConnectedAgent(agent);
     setAgentAvatarUrlState(avatar);
+
+    const persisted = loadPersistedState(addr);
+    setFeed(persisted?.feed ?? INITIAL_FEED);
+    setRules(persisted?.rules ?? INITIAL_RULES);
+    setSpendPermissions(persisted?.spendPermissions ?? INITIAL_SPEND_PERMISSIONS);
+    setStage(persisted?.stage ?? 'INITIAL');
+    setThreads(persisted?.threads ?? SEED_THREADS);
+    setActiveThreadId(null);
   }, [walletKey]);
 
   const setAgentAvatarUrl = useCallback((url: string | null) => {
@@ -433,7 +449,7 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    persistState(feed, rules, spendPermissions, stage, threads);
+    persistState(walletRef.current, feed, rules, spendPermissions, stage, threads);
   }, [feed, rules, spendPermissions, stage, threads]);
 
   const agentLabel = connectedAgent?.name ?? 'Your agent';
