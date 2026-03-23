@@ -62,6 +62,11 @@ export default function Agent() {
   };
 
   const handleAutoPay = async () => {
+    if (!address) {
+      setAutoPayError('Connect wallet first');
+      setAutoPayState('error');
+      return;
+    }
     setAutoPayState('running');
     setAutoPayError(null);
     try {
@@ -77,7 +82,7 @@ export default function Agent() {
           tokenIn: '0x0000000000000000000000000000000000000000',
           tokenOut: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
           amount: '10000000000000000',
-          recipient: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD10',
+          recipient: address,
           paymentAmountUsdc: '10',
         }),
       });
