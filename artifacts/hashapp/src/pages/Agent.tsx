@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Shield, ArrowRight, CheckCircle2, Zap, RefreshCw, ArrowLeftRight, Pencil, Unplug, X, Check } from 'lucide-react';
+import { Shield, ArrowRight, CheckCircle2, Zap, RefreshCw, ArrowLeftRight, Pencil, Unplug, X, Check, ChevronDown } from 'lucide-react';
 import { useAccount, useReadContract } from 'wagmi';
 import { useDemo } from '@/context/DemoContext';
 import { useLocation } from 'wouter';
@@ -125,51 +125,13 @@ export default function Agent() {
           </div>
         </div>
         
-        {isEditingName ? (
-          <div className="flex items-center gap-2 mb-1">
-            <input
-              autoFocus
-              value={editNameValue}
-              onChange={(e) => setEditNameValue(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleSaveEdit(); if (e.key === 'Escape') handleCancelEdit(); }}
-              className="bg-white/[0.06] border border-white/[0.1] rounded-lg px-3 py-1.5 text-[20px] font-bold text-center text-foreground outline-none focus:border-primary/40 transition-colors w-48"
-              maxLength={32}
-            />
-            <button onClick={handleSaveEdit} className="p-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 transition-colors">
-              <Check size={14} className="text-emerald-400" />
-            </button>
-            <button onClick={handleCancelEdit} className="p-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] transition-colors">
-              <X size={14} className="text-muted-foreground/60" />
-            </button>
-          </div>
-        ) : (
-          <h1 className="text-[26px] font-bold tracking-tight mb-1">{agentDisplayName}</h1>
-        )}
+        <h1 className="text-[26px] font-bold tracking-tight mb-1">{agentDisplayName}</h1>
         <p className="text-[12px] text-muted-foreground/50 mb-1">Connected agent</p>
         <p className="text-[10px] text-muted-foreground/30 font-mono tracking-wide mb-4">{AGENT_ADDRESS_SHORT}</p>
         
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/8 border border-emerald-500/10 text-[10px] font-medium text-emerald-400/80">
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
           Active
-        </div>
-
-        <div className="flex items-center gap-5 mt-5 text-[13px]">
-          <button
-            onClick={handleStartEdit}
-            className="inline-flex items-center gap-2 text-muted-foreground/60 hover:text-foreground transition-colors"
-          >
-            <Pencil size={14} />
-            Edit Agent
-          </button>
-          <button
-            onClick={() => {
-              disconnectAgent();
-            }}
-            className="inline-flex items-center gap-2 text-rose-400/80 hover:text-rose-300 transition-colors"
-          >
-            <Unplug size={14} />
-            Remove Agent
-          </button>
         </div>
       </div>
 
@@ -250,21 +212,16 @@ export default function Agent() {
           )}
         </div>
 
-        <div 
-          onClick={handleStartEdit}
-          className="bg-card rounded-2xl p-4 border border-border/30 flex items-center justify-between cursor-pointer hover:bg-white/[0.02] active:bg-white/[0.04] transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-primary/8 flex items-center justify-center">
-              <Pencil size={16} className="text-primary/80" />
-            </div>
-            <div>
-              <h3 className="text-[13px] font-semibold text-foreground">Edit Agent</h3>
-              <p className="text-[10px] text-muted-foreground/40">Change your agent's display name</p>
-            </div>
-          </div>
-          <ArrowRight size={14} className="text-muted-foreground/20" />
-        </div>
+        <EditAgentAccordion
+          agentName={agentDisplayName}
+          isEditingName={isEditingName}
+          editNameValue={editNameValue}
+          setEditNameValue={setEditNameValue}
+          onStartEdit={handleStartEdit}
+          onSaveEdit={handleSaveEdit}
+          onCancelEdit={handleCancelEdit}
+          onRemoveAgent={disconnectAgent}
+        />
 
         <div 
           onClick={() => setLocation('/rules')}
@@ -326,6 +283,92 @@ function AgentOnboarding({ onConnect }: { onConnect: (agent: { name: string }) =
       >
         Connect Agent
       </button>
+    </div>
+  );
+}
+
+function EditAgentAccordion({
+  agentName,
+  isEditingName,
+  editNameValue,
+  setEditNameValue,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
+  onRemoveAgent,
+}: {
+  agentName: string;
+  isEditingName: boolean;
+  editNameValue: string;
+  setEditNameValue: (v: string) => void;
+  onStartEdit: () => void;
+  onSaveEdit: () => void;
+  onCancelEdit: () => void;
+  onRemoveAgent: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="bg-card rounded-2xl border border-border/30 overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full p-4 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-primary/8 flex items-center justify-center">
+            <Pencil size={16} className="text-primary/80" />
+          </div>
+          <div className="text-left">
+            <h3 className="text-[13px] font-semibold text-foreground">Edit Agent</h3>
+            <p className="text-[10px] text-muted-foreground/40">Change your agent's display name</p>
+          </div>
+        </div>
+        <ChevronDown size={14} className={`text-muted-foreground/30 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+      </button>
+
+      <div className={`overflow-hidden transition-all duration-200 ease-in-out ${expanded ? 'max-h-[300px] opacity-100' : 'max-h-0 opacity-0'}`}>
+        <div className="px-4 pb-4 space-y-3 border-t border-white/[0.04] pt-3">
+          {isEditingName ? (
+            <div className="flex items-center gap-2">
+              <input
+                autoFocus
+                value={editNameValue}
+                onChange={(e) => setEditNameValue(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') onSaveEdit(); if (e.key === 'Escape') onCancelEdit(); }}
+                className="flex-1 bg-white/[0.06] border border-white/[0.1] rounded-lg px-3 py-2 text-[13px] text-foreground outline-none focus:border-primary/40 transition-colors"
+                maxLength={32}
+                placeholder="Agent name"
+              />
+              <button onClick={onSaveEdit} className="p-2 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 transition-colors">
+                <Check size={14} className="text-emerald-400" />
+              </button>
+              <button onClick={onCancelEdit} className="p-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] transition-colors">
+                <X size={14} className="text-muted-foreground/60" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={onStartEdit}
+              className="w-full flex items-center justify-between py-2 px-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Pencil size={12} className="text-muted-foreground/40" />
+                <span className="text-[12px] text-muted-foreground/60">Current name:</span>
+                <span className="text-[12px] font-medium text-foreground">{agentName}</span>
+              </div>
+              <ArrowRight size={12} className="text-muted-foreground/20" />
+            </button>
+          )}
+
+          <button
+            onClick={onRemoveAgent}
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-rose-500/[0.06] hover:bg-rose-500/[0.12] border border-rose-500/[0.08] transition-colors"
+          >
+            <Unplug size={13} className="text-rose-400/80" />
+            <span className="text-[12px] font-medium text-rose-400/80">Remove Agent</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
