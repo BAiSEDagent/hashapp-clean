@@ -1,7 +1,7 @@
 # Ampersand
 
 ## Why it fits Hashapp
-Ampersand is useful if it becomes the communication backbone between Scout, the app, and vendor/service actions.
+Ampersand is useful if it becomes the communication backbone between a linked agent, the app, and vendor/service actions.
 
 ## Product role
 Potential uses:

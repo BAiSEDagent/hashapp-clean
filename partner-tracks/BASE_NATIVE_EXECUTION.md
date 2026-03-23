@@ -23,10 +23,10 @@ Before widening the discussion again, prove one minimal Base-native scoped-sessi
 
 ### Minimal proof scope
 1. Human sets policy params
-2. Human issues scoped key to Scout
-3. Scout attempts in-bounds action
+2. Human issues scoped key to a linked agent
+3. Linked agent attempts in-bounds action
 4. In-bounds action succeeds
-5. Scout attempts out-of-bounds action
+5. Linked agent attempts out-of-bounds action
 6. Out-of-bounds action auto-rejects
 
 ## Success criteria

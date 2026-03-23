@@ -59,7 +59,7 @@ In Hashapp, Venice should help with things like:
 Important:
 - Venice is **not** the product
 - Venice is a capability layer inside the product
-- the right UX framing is **Private Review**, not “Venice Mode”
+- Venice should appear as a private reasoning layer, not as a separate “Venice Mode” or a hardcoded assistant flow
 
 See:
 - [`partner-tracks/VENICE.md`](./partner-tracks/VENICE.md)
