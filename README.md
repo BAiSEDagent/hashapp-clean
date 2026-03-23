@@ -83,27 +83,29 @@ The strategic role of Uniswap inside Hashapp is:
 
 ## Demo lane
 Current demo lane:
-- **Research agent**
+- **linked agent operating under bounded authority**
 
 The clean demo story is:
 1. human links an agent
 2. human gives bounded authority
 3. agent requests or executes a payment within policy
-4. human sees the request / approval state
+4. human sees the request / approval / denial state
 5. result appears with proof and receipt context
 
 ## Repo guide
-- `/app` — integrated application workspace
-- `/docs` — product, proof, ops, and strategy docs
+- `/artifacts/hashapp` — frontend application
+- `/artifacts/api-server` — backend / gateway / delegation routes
 - `/partner-tracks` — sponsor-specific framing
 - `/scripts` — helper scripts and demo utilities
+- `/SPEND_PERMISSIONS.md` — bounded-authority model and permission surface
 - `/TRACK1_PROOF.md` — current proof summary
-- `/PRODUCT.md` — product truth
 
 ## Read this next
 If you are evaluating the project, start here:
-- [`PRODUCT.md`](./PRODUCT.md)
+- [`README.md`](./README.md)
 - [`TRACK1_PROOF.md`](./TRACK1_PROOF.md)
+- [`SPEND_PERMISSIONS.md`](./SPEND_PERMISSIONS.md)
+- [`partner-tracks/METAMASK.md`](./partner-tracks/METAMASK.md)
 - [`partner-tracks/VENICE.md`](./partner-tracks/VENICE.md)
 
 ## Honest status
