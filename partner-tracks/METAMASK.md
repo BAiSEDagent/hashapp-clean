@@ -1,53 +1,55 @@
 # MetaMask
 
 ## Why it fits Hashapp
-MetaMask’s Delegation Toolkit and Smart Accounts Kit overlap strongly with Hashapp’s core product model:
-- granular permissions
-- delegated actions
-- recurring approvals / automation
-- agents acting without full wallet control
+MetaMask delegation is one of the strongest real proof surfaces in Hashapp.
+
+Hashapp’s core promise is that an agent can act with bounded authority instead of raw wallet access. MetaMask’s delegation model maps directly to that promise:
+- scoped permissions
+- delegated execution
+- bounded spend
+- auditable onchain enforcement
 
 ## Product role
-MetaMask should be treated as a **compatible delegated-permission path**, not as a reason to pivot the whole product away from Base.
+MetaMask is not decorative sponsor fit.
+It is a core implementation and proof layer for Hashapp’s money-control model.
 
-## Best strategy
-Keep Hashapp:
-- **Base-first**
-- Ethereum-native
-- grounded in Base smart wallets / session keys / paymaster logic
+In Hashapp, MetaMask helps prove that:
+- humans can grant limited authority to agents
+- agents can act inside those limits
+- out-of-policy behavior can be rejected by infrastructure, not just UI copy
+- receipts and proof can point to something real onchain
 
-Then frame MetaMask as:
-- an aligned delegated-permission model
-- a second wallet ecosystem that validates the same product direction
+## Best framing
+The right MetaMask framing for Hashapp is:
 
-## Product value
-MetaMask helps us argue that Hashapp is not a wallet-specific gimmick. The underlying pattern — user-controlled delegated permissions for agent spending — is portable and meaningful beyond one implementation.
+> Delegated authority with verifiable onchain enforcement.
 
-## Good overlap with Hashapp
-- spend permissions
-- recurring transaction approvals
-- delegated actions
-- gas abstraction
-- agentic AI permissions
+That is stronger than generic wallet connectivity and more specific than “smart wallets.”
+
+## What MetaMask proves in Hashapp
+MetaMask is strongest when it proves a real bounded-authority loop:
+1. human grants scoped authority
+2. agent requests or executes within scope
+3. allowed action succeeds
+4. out-of-bounds action is rejected
+5. result is legible through receipts and proof
+
+That makes MetaMask central to the product’s trust story.
+
+## Submission value
+For Synthesis, MetaMask strengthens Hashapp because it turns the product thesis into something judges can verify:
+- delegated permissions are real
+- bounded spend is real
+- enforcement is real
+- onchain proof exists
+
+This is one of the clearest links between the product story and the technical proof.
 
 ## What not to do
-- do not pivot the MVP away from Base
-- do not widen the UI into a multi-wallet showcase
-- do not complicate the main pitch with parallel wallet architectures
-- do not turn MetaMask into a second product story
-
-## Best use in the hackathon
-### Option A — narrative alignment
-Safest path. Mention Hashapp’s permission model aligns naturally with MetaMask’s delegated-permission toolkit.
-
-### Option B — light implementation touch
-Only if easy and real. Use one concrete delegated permission moment that maps to MetaMask’s toolkit without changing the product center.
-
-## Track value
-MetaMask is worthwhile if it strengthens:
-- prize eligibility
-- delegated permission credibility
-- wallet-agnostic architecture story
+- do not reduce MetaMask to “wallet support”
+- do not bury it as a secondary compatibility note
+- do not widen the pitch into a generic multi-wallet story
+- do not let the implementation detail overpower the product thesis
 
 ## Rule
-Base remains the primary home chain and product narrative. MetaMask is additive, not foundational, unless we decide later that its implementation path is materially stronger.
+MetaMask delegation should be framed as a core bounded-authority primitive inside Hashapp, not as a side integration.
