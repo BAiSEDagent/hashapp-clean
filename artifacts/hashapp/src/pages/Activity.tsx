@@ -223,6 +223,12 @@ function FeedCard({
             <p className={`text-[11px] truncate leading-relaxed ${isBlocked ? 'text-muted-foreground/35' : 'text-muted-foreground/50'}`}>{item.intent}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {item.swapTxHash && !isSwap && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase tracking-wider bg-pink-500/10 border border-pink-500/20 text-pink-400/80">
+                <ArrowDownUp size={7} />
+                Uniswap
+              </span>
+            )}
             {badgeType && <TruthBadge type={badgeType} txHash={item.txHash} />}
             <StatusDot status={item.status} />
           </div>
