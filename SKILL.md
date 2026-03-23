@@ -95,7 +95,11 @@ Expected reasoning output usually includes:
 ### Venice-backed reasoning usage
 For private reasoning inside Hashapp, prefer the Hashapp surface rather than calling Venice directly from an external agent.
 
-Use `POST /api/gateway/reason` when you need Hashapp to produce a machine-readable recommendation that may be backed by Venice.
+In the current repo, Hashapp's Venice integration is wired to:
+- Venice base URL: `https://api.venice.ai/api/v1`
+- model: `llama-3.3-70b`
+
+Use `POST /api/gateway/reason` when you need Hashapp to produce a machine-readable recommendation backed by Venice-style private reasoning.
 
 Good use cases:
 - evaluating a new vendor
@@ -103,8 +107,32 @@ Good use cases:
 - deciding whether to ask for approval now or wait
 - requesting a concise rationale before sending a spend request
 
+Suggested request shape:
+```json
+{
+  "context": "private wallet state, vendor info, and budget constraints",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Should I request this vendor now?"
+    }
+  ]
+}
+```
+
+Expected response shape:
+```json
+{
+  "decision": "approve",
+  "vendor": "DataStream Pro",
+  "amount": 5,
+  "reason": "Within cap and low risk"
+}
+```
+
 Agent rule:
 - ask Hashapp for the recommendation
+- treat the response as a recommendation, not automatic execution
 - do not claim direct Venice execution unless the exact path is verified
 - do not describe Venice as the whole product
 - treat Venice as a private reasoning layer that informs trusted public action
