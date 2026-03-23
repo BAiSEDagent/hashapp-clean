@@ -444,8 +444,13 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
     persistConnectedAgent(walletRef.current, null);
     setAgentAvatarUrlState(null);
     persistAgentAvatar(walletRef.current, null);
-    setThreads([]);
+    setFeed(INITIAL_FEED);
+    setRules(INITIAL_RULES);
+    setSpendPermissions(INITIAL_SPEND_PERMISSIONS);
+    setStage('INITIAL');
+    setThreads(SEED_THREADS);
     setActiveThreadId(null);
+    setPrivateReasoningEnabled(true);
   }, []);
 
   useEffect(() => {
@@ -771,7 +776,8 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const resetDemo = useCallback(() => {
-    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    const key = stateKey(walletRef.current);
+    if (key) { try { localStorage.removeItem(key); } catch {} }
     setFeed(INITIAL_FEED);
     setRules(INITIAL_RULES);
     setSpendPermissions(INITIAL_SPEND_PERMISSIONS);
